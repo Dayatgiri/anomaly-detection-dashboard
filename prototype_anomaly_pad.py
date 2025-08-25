@@ -45,8 +45,11 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
         st.error(f"Error reading CSV: {e}")
         return None
 
-    # Standardize column names
+    # Standardize column names to lowercase and remove extra spaces
     df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+
+    # Check the columns in the dataset
+    st.write(f"Columns in dataset: {df.columns.tolist()}")  # This will print the column names to the Streamlit app
 
     # Required columns check
     required_cols = ["wp_id", "tanggal", "sector_code", "kec_code", "paid_tax", "expected_tax"]
@@ -64,7 +67,11 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
     df = df.merge(counts, on=["wp_id", "month"], how="left")
 
     # One-hot encode categorical features
-    df = pd.get_dummies(df, columns=["sector_code", "kec_code"], drop_first=True)
+    if "sector_code" in df.columns:
+        df = pd.get_dummies(df, columns=["sector_code", "kec_code"], drop_first=True)
+    else:
+        st.error("Column 'sector_code' not found in the dataset")
+        return None
 
     # Feature selection
     feature_cols = [col for col in df.columns if col not in ["wp_id", "tanggal"]]
@@ -96,7 +103,8 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
     df["is_anomaly"] = df["anomaly_label"] == -1
 
     # Show sector name based on wp_id
-    df['sector_name'] = df['sector_code'].apply(lambda x: x.split('_')[-1] if isinstance(x, str) else "Unknown")
+    if "sector_code" in df.columns:
+        df['sector_name'] = df['sector_code'].apply(lambda x: x.split('_')[-1] if isinstance(x, str) else "Unknown")
     
     return df
 
