@@ -84,7 +84,7 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
         return None
 
     # Drop non-numeric columns or encode them (for categorical columns like 'kode_kecamatan')
-    categorical_columns = ['nama_sektor']
+    categorical_columns = ['nama_sektor', 'nama_kecamatan']
     df_encoded = df.drop(categorical_columns, axis=1)  # Drop the categorical columns
 
     # One-hot encode the `kode_sector` and `kode_kecamatan` columns
