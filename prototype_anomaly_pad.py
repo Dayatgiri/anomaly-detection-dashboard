@@ -83,15 +83,8 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
         st.error("'kode_sector' column is missing in the CSV.")
         return None
 
-    # Debugging: Check if 'kode_sector' is present
-    st.write(f"Unique values in 'kode_sector': {df['kode_sector'].unique()}")
-
-    # Drop 'nama_sektor' column as it's categorical and not needed for training
-    if 'nama_sektor' in df.columns:
-        df = df.drop(columns=["nama_sektor"])
-
-    # One-hot encode categorical features
-    df_encoded = pd.get_dummies(df, columns=["kode_sector", "nama_kecamatan"], drop_first=True)
+    # One-hot encode the `kode_sector` column only
+    df_encoded = pd.get_dummies(df, columns=["kode_sector"], drop_first=True)
 
     # Debugging: Check column names after one-hot encoding
     st.write(f"Columns after one-hot encoding: {df_encoded.columns.tolist()}")
@@ -104,7 +97,7 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
     counts = df_encoded.groupby(["wp_id", "month"]).size().rename("txn_wp_month").reset_index()
     df_encoded = df_encoded.merge(counts, on=["wp_id", "month"], how="left")
 
-    # Feature selection (now including 'kode_sector' as part of the features)
+    # Feature selection (now including one-hot encoded columns for 'kode_sector')
     feature_cols = [col for col in df_encoded.columns if col not in ["wp_id", "tanggal", "pajak_dibayar", "target_pajak", "rasio_pajakdibayar"]]
     X = df_encoded[feature_cols].copy()
 
@@ -150,11 +143,13 @@ def create_visualizations(df):
     axes[0,0].axvline(x=df['anomaly_score'].quantile(0.95), color='red', linestyle='--', label='95th percentile')
     axes[0,0].legend()
 
-    # Anomalies by sector based on wp_id
+    # Anomalies by sector based on wp_id (group by 'kode_sector')
     anomalies_wp_id = df[df['is_anomaly'] == True]
     
-    # Group anomalies by sector_name (use 'kode_sector' instead of 'nama_sektor')
-    sector_anomalies = anomalies_wp_id.groupby('kode_sector').size().sort_values(ascending=False)
+    # We will check the one-hot encoded columns for sector
+    sector_columns = [col for col in df.columns if 'kode_sector' in col]
+    
+    sector_anomalies = anomalies_wp_id[sector_columns].sum().sort_values(ascending=False)
     axes[0,1].barh(sector_anomalies.index, sector_anomalies.values, color='salmon')
     axes[0,1].set_xlabel('Number of Anomalies')
     axes[0,1].set_title('Anomalies by Sector')
