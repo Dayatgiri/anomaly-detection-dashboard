@@ -34,10 +34,10 @@ def install_required_packages():
     return results
 
 # =========================
-# Anomaly Detection Function
+# Anomaly Detection Function with Adjusted Parameters
 # =========================
-def run_anomaly_detection(input_csv, contamination=0.06, random_state=42):
-    """Run Isolation Forest anomaly detection with safe column checks"""
+def run_anomaly_detection(input_csv, contamination=0.02, random_state=42, n_estimators=200, max_samples='auto', max_features=1.0):
+    """Run Isolation Forest anomaly detection with adjusted parameters"""
     
     try:
         df = pd.read_csv(input_csv, parse_dates=["tanggal"])
@@ -91,9 +91,17 @@ def run_anomaly_detection(input_csv, contamination=0.06, random_state=42):
     X["log_expected"] = np.log1p(X["expected_tax"])
     X = X.drop(columns=["paid_tax","expected_tax"])
 
-    # Isolation Forest
-    model = IsolationForest(n_estimators=300, contamination=contamination, 
-                            random_state=random_state, n_jobs=-1)
+    # Isolation Forest with adjusted parameters
+    model = IsolationForest(
+        n_estimators=n_estimators,         # Adjusted number of estimators
+        contamination=contamination,       # Adjusted contamination rate
+        max_samples=max_samples,           # Max samples per tree
+        max_features=max_features,         # Max features to use for each tree
+        random_state=random_state,         # Set random state for reproducibility
+        n_jobs=-1                           # Use all CPU cores for faster processing
+    )
+
+    # Fit the model and get predictions
     pred = model.fit_predict(X)
     score = model.decision_function(X)
     
