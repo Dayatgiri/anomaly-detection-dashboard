@@ -76,7 +76,7 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
             return None
 
     # One-hot encode categorical features
-    df_encoded = pd.get_dummies(df, columns=["kode_sector", "nama_kecamatan", "nama_sektor"], drop_first=True)
+    df_encoded = pd.get_dummies(df, columns=["kode_sector", "nama_kecamatan"], drop_first=True)
 
     # Create ratio and month
     df_encoded["rasio_pajakdibayar"] = (df_encoded["pajak_dibayar"] / df_encoded["target_pajak"]).replace([np.inf, -np.inf], np.nan).fillna(0.0)
@@ -87,7 +87,7 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
     df_encoded = df_encoded.merge(counts, on=["wp_id", "month"], how="left")
 
     # Feature selection
-    feature_cols = [col for col in df_encoded.columns if col not in ["wp_id", "tanggal", "pajak_dibayar", "target_pajak", "rasio_pajakdibayar"]]
+    feature_cols = [col for col in df_encoded.columns if col not in ["wp_id", "tanggal", "kode_sector", "nama_kecamatan", "pajak_dibayar", "target_pajak", "rasio_pajakdibayar"]]
     X = df_encoded[feature_cols].copy()
 
     # Log transform numeric features
@@ -136,11 +136,10 @@ def create_visualizations(df):
     anomalies_wp_id = df[df['is_anomaly'] == True]
     
     # Group anomalies by sector_name
-    if 'nama_sektor' in df.columns:
-        sector_anomalies = anomalies_wp_id.groupby('nama_sektor').size().sort_values(ascending=False)
-        axes[0,1].barh(sector_anomalies.index, sector_anomalies.values, color='salmon')
-        axes[0,1].set_xlabel('Number of Anomalies')
-        axes[0,1].set_title('Anomalies by Sector')
+    sector_anomalies = anomalies_wp_id.groupby('nama_sektor').size().sort_values(ascending=False)
+    axes[0,1].barh(sector_anomalies.index, sector_anomalies.values, color='salmon')
+    axes[0,1].set_xlabel('Number of Anomalies')
+    axes[0,1].set_title('Anomalies by Sector')
 
     # Paid vs Expected tax
     sample_df = df.sample(min(1000, len(df)), random_state=42)
