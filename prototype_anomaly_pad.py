@@ -226,9 +226,17 @@ def main():
         if 'df' in st.session_state:
             st.pyplot(create_visualizations(st.session_state.df))
             st.subheader("Top Anomalies")
+            
+            # Adjust this line to avoid KeyError by looking for the one-hot encoded columns
             top_anomalies = st.session_state.df[st.session_state.df["is_anomaly"]].sort_values(
                 "anomaly_score", ascending=False).head(10)
-            st.dataframe(top_anomalies[['wp_id','kode_sector','pajak_dibayar','target_pajak','anomaly_score']])
+            top_anomalies = top_anomalies[[
+                'wp_id', 
+                'pajak_dibayar', 
+                'target_pajak', 
+                'anomaly_score'] + [col for col in top_anomalies.columns if 'kode_sector' in col or 'kode_kecamatan' in col]]
+
+            st.dataframe(top_anomalies)
         else:
             st.info("Run anomaly detection first to see visualizations")
 
