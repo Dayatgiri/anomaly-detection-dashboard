@@ -49,7 +49,7 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
     df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
 
     # Required columns check
-    required_cols = ["wp_id","tanggal","sektor","kecamatan","paid_tax","expected_tax"]
+    required_cols = ["wp_id", "tanggal", "sector_code", "kec_code", "paid_tax", "expected_tax"]
     missing_cols = [col for col in required_cols if col not in df.columns]
     if missing_cols:
         st.error(f"Missing required column(s) in CSV: {missing_cols}")
@@ -60,14 +60,14 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
     df["month"] = df["tanggal"].dt.month
 
     # txn_wp_month
-    counts = df.groupby(["wp_id","month"]).size().rename("txn_wp_month").reset_index()
-    df = df.merge(counts, on=["wp_id","month"], how="left")
+    counts = df.groupby(["wp_id", "month"]).size().rename("txn_wp_month").reset_index()
+    df = df.merge(counts, on=["wp_id", "month"], how="left")
 
     # One-hot encode categorical features
-    df = pd.get_dummies(df, columns=["sektor","kecamatan"], drop_first=True)
+    df = pd.get_dummies(df, columns=["sector_code", "kec_code"], drop_first=True)
 
     # Feature selection
-    feature_cols = [col for col in df.columns if col not in ["wp_id","tanggal"]]
+    feature_cols = [col for col in df.columns if col not in ["wp_id", "tanggal"]]
     X = df[feature_cols].copy()
 
     # Log transform numeric features
@@ -76,7 +76,7 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
             X[col] = np.log1p(X[col])
 
     # Standardize numeric features
-    num_features = ["paid_tax","expected_tax","ratio_paid_expected","txn_wp_month","month"]
+    num_features = ["paid_tax", "expected_tax", "ratio_paid_expected", "txn_wp_month", "month"]
     num_features = [f for f in num_features if f in X.columns]
     if num_features:
         X[num_features] = StandardScaler().fit_transform(X[num_features])
@@ -112,7 +112,7 @@ def create_visualizations(df):
     axes[0,0].legend()
 
     # Anomalies by sector
-    sector_cols = [col for col in df.columns if col.startswith("sektor_")]
+    sector_cols = [col for col in df.columns if col.startswith("sector_code_")]
     if sector_cols:
         df["sector"] = df[sector_cols].idxmax(axis=1)
     else:
