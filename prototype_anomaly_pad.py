@@ -8,11 +8,13 @@ import seaborn as sns
 from datetime import datetime
 import streamlit as st
 
+# ------------------------ Utilities ------------------------
+
 def check_python_installation():
     """Check if Python is properly installed and accessible"""
     try:
         result = subprocess.run([sys.executable, "--version"], 
-                              capture_output=True, text=True, timeout=10)
+                                capture_output=True, text=True, timeout=10)
         if result.returncode == 0:
             return True, f"Python found: {result.stdout.strip()}"
         else:
@@ -32,37 +34,57 @@ def install_required_packages():
             results.append(f"✗ Failed to install {package}")
     return results
 
-def run_anomaly_detection(input_csv, contamination=0.06, random_state=42):
-    """Run Isolation Forest anomaly detection"""
-    df = pd.read_csv(input_csv, parse_dates=["tanggal"])
-    
-    # Recreate features
-    sectors = sorted(df["sektor"].unique())
-    kecamatan = sorted(df["kecamatan"].unique())
-    sector_code = {s:i for i,s in enumerate(sectors)}
-    kec_code = {k:i for i,k in enumerate(kecamatan)}
-    
-    df["ratio_paid_expected"] = (df["paid_tax"] / df["expected_tax"]).replace([np.inf, -np.inf], np.nan).fillna(0.0)
-    df["month"] = df["tanggal"].dt.month
-    counts = df.groupby(["wp_id", "month"]).size().rename("txn_wp_month").reset_index()
-    df = df.merge(counts, on=["wp_id","month"], how="left")
-    df["sector_code"] = df["sektor"].map(sector_code)
-    df["kec_code"] = df["kecamatan"].map(kec_code)
+# ------------------------ Anomaly Detection ------------------------
 
-    X = df[["paid_tax", "expected_tax", "ratio_paid_expected", "month", "txn_wp_month", "sector_code", "kec_code"]].copy()
+def run_anomaly_detection(input_csv, contamination=0.06, random_state=42):
+    """Run Isolation Forest anomaly detection with robust column handling"""
+    df = pd.read_csv(input_csv, parse_dates=["tanggal"])
+
+    # Standardize column names
+    df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+    
+    # Check required columns
+    required_cols = ["wp_id", "tanggal", "sektor", "kecamatan", "paid_tax", "expected_tax"]
+    missing_cols = [col for col in required_cols if col not in df.columns]
+    if missing_cols:
+        raise ValueError(f"Missing required column(s) in CSV: {missing_cols}")
+
+    # Derived features
+    df["ratio_paid_expected"] = (df["paid_tax"] / df["expected_tax"]).replace([np.inf, -np.inf], 0)
+    df["month"] = pd.to_datetime(df["tanggal"]).dt.month
+
+    # Transactions per WP per month
+    counts = df.groupby(["wp_id", "month"]).size().rename("txn_wp_month").reset_index()
+    df = df.merge(counts, on=["wp_id", "month"], how="left")
+
+    # Encode categorical columns
+    df["sector_code"] = df["sektor"].map({s:i for i,s in enumerate(df["sektor"].unique())})
+    df["kec_code"] = df["kecamatan"].map({k:i for i,k in enumerate(df["kecamatan"].unique())})
+
+    # Select features for Isolation Forest
+    feature_cols = ["paid_tax", "expected_tax", "ratio_paid_expected", "month",
+                    "txn_wp_month", "sector_code", "kec_code"]
+    X = df[feature_cols].copy()
     X["log_paid"] = np.log1p(X["paid_tax"])
     X["log_expected"] = np.log1p(X["expected_tax"])
     X = X.drop(columns=["paid_tax","expected_tax"])
 
-    model = IsolationForest(n_estimators=300, contamination=contamination, 
-                           random_state=random_state, n_jobs=-1)
+    # Fit Isolation Forest
+    model = IsolationForest(
+        n_estimators=300, contamination=contamination, 
+        random_state=random_state, n_jobs=-1
+    )
     pred = model.fit_predict(X)
     score = model.decision_function(X)
+
+    # Add anomaly results to DataFrame
     df["anomaly_label"] = pred
     df["anomaly_score"] = -score
     df["is_anomaly"] = df["anomaly_label"] == -1
-    
+
     return df
+
+# ------------------------ Visualizations ------------------------
 
 def create_visualizations(df):
     """Create visualizations for the anomaly detection results"""
@@ -85,7 +107,7 @@ def create_visualizations(df):
     axes[0, 1].set_title('Anomaly Proportion by Sector')
     
     # Plot 3: Paid vs Expected tax with anomalies highlighted
-    sample_df = df.sample(min(1000, len(df)), random_state=42)  # Sample for better visualization
+    sample_df = df.sample(min(1000, len(df)), random_state=42)
     colors = ['red' if anom else 'blue' for anom in sample_df['is_anomaly']]
     axes[1, 0].scatter(sample_df['expected_tax'], sample_df['paid_tax'], c=colors, alpha=0.6)
     axes[1, 0].set_xlabel('Expected Tax')
@@ -105,16 +127,17 @@ def create_visualizations(df):
     plt.tight_layout()
     return fig
 
+# ------------------------ Streamlit App ------------------------
+
 def main():
     st.set_page_config(page_title="Anomaly Detection Dashboard", layout="wide")
-    
     st.title("Python Environment Setup & Anomaly Detection Dashboard")
     
     tab1, tab2, tab3 = st.tabs(["Environment Check", "Anomaly Detection", "Visualizations"])
     
+    # -------- Tab 1: Environment --------
     with tab1:
         st.header("Python Environment Check")
-        
         st.write("""
         If you're getting "Python not installed" errors in VS Code, follow these steps:
         1. Make sure Python is installed from [python.org](https://python.org)
@@ -136,20 +159,17 @@ def main():
                     st.success(result)
                 else:
                     st.error(result)
-    
+
+    # -------- Tab 2: Anomaly Detection --------
     with tab2:
         st.header("Run Anomaly Detection")
-        
-        st.write("Upload your transaction data CSV file:")
         uploaded_file = st.file_uploader("Choose CSV file", type="csv")
-        
         contamination = st.slider("Contamination parameter", 0.01, 0.5, 0.06, 0.01)
         
-        if uploaded_file is not None:
-            if st.button("Run Detection"):
-                with st.spinner("Running anomaly detection..."):
+        if uploaded_file is not None and st.button("Run Detection"):
+            with st.spinner("Running anomaly detection..."):
+                try:
                     df = run_anomaly_detection(uploaded_file, contamination=contamination)
-                    
                     anomalies = df[df["is_anomaly"]]
                     st.success(f"Detection complete! Found {len(anomalies)} anomalies.")
                     
@@ -161,10 +181,14 @@ def main():
                     )
                     
                     st.session_state.df = df
-    
+
+                except Exception as e:
+                    st.error(f"Error processing CSV: {e}")
+                    st.info("Make sure your CSV contains columns: wp_id, tanggal, sektor, kecamatan, paid_tax, expected_tax")
+
+    # -------- Tab 3: Visualizations --------
     with tab3:
         st.header("Result Visualizations")
-        
         if 'df' in st.session_state:
             st.pyplot(create_visualizations(st.session_state.df))
             
@@ -172,9 +196,11 @@ def main():
             top_anomalies = st.session_state.df[st.session_state.df["is_anomaly"]].sort_values(
                 "anomaly_score", ascending=False).head(10)
             st.dataframe(top_anomalies[['wp_id', 'sektor', 'kecamatan', 'paid_tax', 
-                                       'expected_tax', 'anomaly_score']])
+                                        'expected_tax', 'anomaly_score']])
         else:
             st.info("Run anomaly detection first to see visualizations")
+
+# ------------------------ Main Entry ------------------------
 
 if __name__ == "__main__":
     main()
