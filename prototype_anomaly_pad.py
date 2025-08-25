@@ -91,11 +91,11 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
 
     # Create ratio and month
     df_encoded["rasio_pajakdibayar"] = (df_encoded["pajak_dibayar"] / df_encoded["target_pajak"]).replace([np.inf, -np.inf], np.nan).fillna(0.0)
-    df_encoded["month"] = df_encoded["tanggal"].dt.month
+    df_encoded["bulan"] = df_encoded["tanggal"].dt.month
 
     # txn_wp_month
-    counts = df_encoded.groupby(["wp_id", "month"]).size().rename("txn_wp_month").reset_index()
-    df_encoded = df_encoded.merge(counts, on=["wp_id", "month"], how="left")
+    counts = df_encoded.groupby(["wp_id", "bulan"]).size().rename("txn_wp_month").reset_index()
+    df_encoded = df_encoded.merge(counts, on=["wp_id", "bulan"], how="left")
 
     # Feature selection (now including one-hot encoded columns for 'kode_sector')
     feature_cols = [col for col in df_encoded.columns if col not in ["wp_id", "tanggal", "pajak_dibayar", "target_pajak", "rasio_pajakdibayar"]]
@@ -107,7 +107,7 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
             X[col] = np.log1p(X[col])
 
     # Standardize numeric features
-    num_features = ["pajak_dibayar", "target_pajak", "rasio_pajakdibayar", "txn_wp_month", "month"]
+    num_features = ["pajak_dibayar", "target_pajak", "rasio_pajakdibayar", "txn_wp_month", "bulan"]
     num_features = [f for f in num_features if f in X.columns]
     if num_features:
         X[num_features] = StandardScaler().fit_transform(X[num_features])
