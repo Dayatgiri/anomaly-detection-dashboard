@@ -102,10 +102,6 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
     df["anomaly_score"] = -score
     df["is_anomaly"] = df["anomaly_label"] == -1
 
-    # Show sector name based on wp_id
-    if "sector_code" in df.columns:
-        df['sector_name'] = df['sector_code'].apply(lambda x: x.split('_')[-1] if isinstance(x, str) else "Unknown")
-    
     return df
 
 # =========================
@@ -124,11 +120,11 @@ def create_visualizations(df):
 
     # Anomalies by sector based on wp_id
     anomalies_wp_id = df[df['is_anomaly'] == True]
-    wp_id_sectors = anomalies_wp_id[['wp_id', 'sector_name']].drop_duplicates()
+    wp_id_sectors = anomalies_wp_id[['wp_id', 'sector_code']].drop_duplicates()
     
-    # Check if sector_name exists before trying to group by
-    if 'sector_name' in wp_id_sectors.columns:
-        sector_anomalies = wp_id_sectors.groupby('sector_name').size().sort_values(ascending=False)
+    # Check if sector_code exists before trying to group by
+    if 'sector_code' in wp_id_sectors.columns:
+        sector_anomalies = wp_id_sectors.groupby('sector_code').size().sort_values(ascending=False)
         axes[0,1].barh(sector_anomalies.index, sector_anomalies.values, color='salmon')
         axes[0,1].set_xlabel('Number of Anomalies')
         axes[0,1].set_title('Anomalies by Sector')
@@ -203,7 +199,7 @@ def main():
             st.subheader("Top Anomalies")
             top_anomalies = st.session_state.df[st.session_state.df["is_anomaly"]].sort_values(
                 "anomaly_score", ascending=False).head(10)
-            st.dataframe(top_anomalies[['wp_id','sector_name','paid_tax','expected_tax','anomaly_score']])
+            st.dataframe(top_anomalies[['wp_id','sector_code','paid_tax','expected_tax','anomaly_score']])
         else:
             st.info("Run anomaly detection first to see visualizations")
 
