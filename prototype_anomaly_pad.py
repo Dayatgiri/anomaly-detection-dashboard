@@ -86,8 +86,8 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
     counts = df_encoded.groupby(["wp_id", "month"]).size().rename("txn_wp_month").reset_index()
     df_encoded = df_encoded.merge(counts, on=["wp_id", "month"], how="left")
 
-    # Feature selection
-    feature_cols = [col for col in df_encoded.columns if col not in ["wp_id", "tanggal", "kode_sector", "nama_kecamatan", "pajak_dibayar", "target_pajak", "rasio_pajakdibayar"]]
+    # Feature selection (now including 'kode_sector' as part of the features)
+    feature_cols = [col for col in df_encoded.columns if col not in ["wp_id", "tanggal", "pajak_dibayar", "target_pajak", "rasio_pajakdibayar"]]
     X = df_encoded[feature_cols].copy()
 
     # Log transform numeric features
@@ -115,17 +115,6 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
     df_encoded["anomaly_score"] = -score
     df_encoded["is_anomaly"] = df_encoded["anomaly_label"] == -1
 
-    # Map the 'kode_sector' back to 'nama_sektor' (since 'kode_sector' is numeric)
-    sector_mapping = {
-        1: 'sector_reklame',
-        2: 'sector_parkir',
-        3: 'sector_hotel',
-        4: 'sector_restoran'
-    }
-
-    # Replace 'kode_sector' with 'nama_sektor' in the DataFrame
-    df_encoded['nama_sektor'] = df_encoded['kode_sector'].map(sector_mapping)
-
     # Return the dataframe with anomalies and other info
     return df_encoded
 
@@ -147,7 +136,7 @@ def create_visualizations(df):
     anomalies_wp_id = df[df['is_anomaly'] == True]
     
     # Group anomalies by sector_name
-    sector_anomalies = anomalies_wp_id.groupby('nama_sektor').size().sort_values(ascending=False)
+    sector_anomalies = anomalies_wp_id.groupby('kode_sector').size().sort_values(ascending=False)
     axes[0,1].barh(sector_anomalies.index, sector_anomalies.values, color='salmon')
     axes[0,1].set_xlabel('Number of Anomalies')
     axes[0,1].set_title('Anomalies by Sector')
@@ -222,7 +211,7 @@ def main():
             st.subheader("Top Anomalies")
             top_anomalies = st.session_state.df[st.session_state.df["is_anomaly"]].sort_values(
                 "anomaly_score", ascending=False).head(10)
-            st.dataframe(top_anomalies[['wp_id','nama_sektor','pajak_dibayar','target_pajak','anomaly_score']])
+            st.dataframe(top_anomalies[['wp_id','kode_sector','pajak_dibayar','target_pajak','anomaly_score']])
         else:
             st.info("Run anomaly detection first to see visualizations")
 
