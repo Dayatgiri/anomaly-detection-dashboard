@@ -66,13 +66,7 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
     counts = df.groupby(["wp_id", "month"]).size().rename("txn_wp_month").reset_index()
     df = df.merge(counts, on=["wp_id", "month"], how="left")
 
-    # One-hot encode categorical features
-    if "sector_code" in df.columns:
-        df = pd.get_dummies(df, columns=["sector_code", "kec_code"], drop_first=True)
-    else:
-        st.error("Column 'sector_code' not found in the dataset")
-        return None
-
+    # No one-hot encoding of sector_code, use it directly
     # Feature selection
     feature_cols = [col for col in df.columns if col not in ["wp_id", "tanggal"]]
     X = df[feature_cols].copy()
@@ -121,12 +115,9 @@ def create_visualizations(df):
     # Anomalies by sector based on wp_id
     anomalies_wp_id = df[df['is_anomaly'] == True]
     
-    # After one-hot encoding, sector_code becomes multiple columns like sector_code_parkir, sector_code_reklame, etc.
-    sector_columns = [col for col in df.columns if col.startswith("sector_code_")]
-    
-    if sector_columns:
-        # Sum anomalies by sector columns
-        sector_anomalies = anomalies_wp_id[sector_columns].sum().sort_values(ascending=False)
+    # Group anomalies by sector_code
+    if 'sector_code' in df.columns:
+        sector_anomalies = anomalies_wp_id.groupby('sector_code').size().sort_values(ascending=False)
         axes[0,1].barh(sector_anomalies.index, sector_anomalies.values, color='salmon')
         axes[0,1].set_xlabel('Number of Anomalies')
         axes[0,1].set_title('Anomalies by Sector')
