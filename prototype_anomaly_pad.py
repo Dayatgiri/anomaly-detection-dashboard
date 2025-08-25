@@ -115,6 +115,17 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
     df_encoded["anomaly_score"] = -score
     df_encoded["is_anomaly"] = df_encoded["anomaly_label"] == -1
 
+    # Map the 'kode_sector' back to 'nama_sektor' (since 'kode_sector' is numeric)
+    sector_mapping = {
+        1: 'sector_reklame',
+        2: 'sector_parkir',
+        3: 'sector_hotel',
+        4: 'sector_restoran'
+    }
+
+    # Replace 'kode_sector' with 'nama_sektor' in the DataFrame
+    df_encoded['nama_sektor'] = df_encoded['kode_sector'].map(sector_mapping)
+
     # Return the dataframe with anomalies and other info
     return df_encoded
 
