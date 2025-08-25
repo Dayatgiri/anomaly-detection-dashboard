@@ -53,7 +53,7 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
     st.write(f"Columns in dataset: {df.columns.tolist()}")  # This will print the column names to the Streamlit app
 
     # Required columns check
-    required_cols = ["wp_id", "tanggal", "sector_name", "kec_code", "paid_tax", "expected_tax"]
+    required_cols = ["wp_id", "tanggal", "kode_sector", "nama_kecamatan", "pajak_dibayar", "target_pajak"]
     missing_cols = [col for col in required_cols if col not in df.columns]
     if missing_cols:
         st.error(f"Missing required column(s) in CSV: {missing_cols}")
@@ -67,7 +67,7 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
         return None
 
     # Clean up the numeric columns (remove periods and convert to float)
-    numeric_columns = ['omzet_est', 'tarif', 'expected_tax', 'paid_tax', 'ratio_paid_expected']
+    numeric_columns = ['omset', 'target_pajak', 'pajak_dibayar', 'rasio_pajakdibayar']
     for col in numeric_columns:
         if col in df.columns:
             df[col] = df[col].replace({',': '', '.': ''}, regex=True).astype(float)
@@ -76,24 +76,24 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
             return None
 
     # Create ratio and month
-    df["ratio_paid_expected"] = (df["paid_tax"] / df["expected_tax"]).replace([np.inf, -np.inf], np.nan).fillna(0.0)
-    df["month"] = df["tanggal"].dt.month
+    df["rasio_pajakdibayar"] = (df["pajak_dibayar"] / df["target_pajak"]).replace([np.inf, -np.inf], np.nan).fillna(0.0)
+    df["bulan"] = df["tanggal"].dt.month
 
     # txn_wp_month
-    counts = df.groupby(["wp_id", "month"]).size().rename("txn_wp_month").reset_index()
-    df = df.merge(counts, on=["wp_id", "month"], how="left")
+    counts = df.groupby(["wp_id", "bulan"]).size().rename("txn_wp_month").reset_index()
+    df = df.merge(counts, on=["wp_id", "bulan"], how="left")
 
     # Feature selection
-    feature_cols = [col for col in df.columns if col not in ["wp_id", "tanggal", "sector_name"]]
+    feature_cols = [col for col in df.columns if col not in ["wp_id", "tanggal", "kode_sector", "nama_kecamatan"]]
     X = df[feature_cols].copy()
 
     # Log transform numeric features
-    for col in ["paid_tax", "expected_tax"]:
+    for col in ["pajak_dibayar", "target_pajak"]:
         if col in X.columns:
             X[col] = np.log1p(X[col])
 
     # Standardize numeric features
-    num_features = ["paid_tax", "expected_tax", "ratio_paid_expected", "txn_wp_month", "month"]
+    num_features = ["pajak_dibayar", "target_pajak", "rasio_pajakdibayar", "txn_wp_month", "bulan"]
     num_features = [f for f in num_features if f in X.columns]
     if num_features:
         X[num_features] = StandardScaler().fit_transform(X[num_features])
@@ -132,8 +132,8 @@ def create_visualizations(df):
     anomalies_wp_id = df[df['is_anomaly'] == True]
     
     # Group anomalies by sector_name
-    if 'sector_name' in df.columns:
-        sector_anomalies = anomalies_wp_id.groupby('sector_name').size().sort_values(ascending=False)
+    if 'nama_sektor' in df.columns:
+        sector_anomalies = anomalies_wp_id.groupby('nama_sektor').size().sort_values(ascending=False)
         axes[0,1].barh(sector_anomalies.index, sector_anomalies.values, color='salmon')
         axes[0,1].set_xlabel('Number of Anomalies')
         axes[0,1].set_title('Anomalies by Sector')
@@ -141,10 +141,10 @@ def create_visualizations(df):
     # Paid vs Expected tax
     sample_df = df.sample(min(1000, len(df)), random_state=42)
     colors = ['red' if anom else 'blue' for anom in sample_df['is_anomaly']]
-    axes[1,0].scatter(sample_df['expected_tax'], sample_df['paid_tax'], c=colors, alpha=0.6)
-    axes[1,0].set_xlabel('Expected Tax')
-    axes[1,0].set_ylabel('Paid Tax')
-    axes[1,0].set_title('Paid vs Expected Tax (Red = Anomaly)')
+    axes[1,0].scatter(sample_df['target_pajak'], sample_df['pajak_dibayar'], c=colors, alpha=0.6)
+    axes[1,0].set_xlabel('Target Pajak')
+    axes[1,0].set_ylabel('Pajak Dibayar')
+    axes[1,0].set_title('Paid vs Expected Pajak (Red = Anomaly)')
     axes[1,0].set_xscale('log')
     axes[1,0].set_yscale('log')
 
@@ -208,7 +208,7 @@ def main():
             st.subheader("Top Anomalies")
             top_anomalies = st.session_state.df[st.session_state.df["is_anomaly"]].sort_values(
                 "anomaly_score", ascending=False).head(10)
-            st.dataframe(top_anomalies[['wp_id','sector_name','paid_tax','expected_tax','anomaly_score']])
+            st.dataframe(top_anomalies[['wp_id','nama_sektor','pajak_dibayar','target_pajak','anomaly_score']])
         else:
             st.info("Run anomaly detection first to see visualizations")
 
