@@ -75,17 +75,20 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
             st.error(f"Column {col} is missing in the CSV.")
             return None
 
+    # One-hot encode categorical features
+    df_encoded = pd.get_dummies(df, columns=["kode_sector", "nama_kecamatan", "nama_sektor"], drop_first=True)
+
     # Create ratio and month
-    df["rasio_pajakdibayar"] = (df["pajak_dibayar"] / df["target_pajak"]).replace([np.inf, -np.inf], np.nan).fillna(0.0)
-    df["bulan"] = df["tanggal"].dt.month
+    df_encoded["rasio_pajakdibayar"] = (df_encoded["pajak_dibayar"] / df_encoded["target_pajak"]).replace([np.inf, -np.inf], np.nan).fillna(0.0)
+    df_encoded["month"] = df_encoded["tanggal"].dt.month
 
     # txn_wp_month
-    counts = df.groupby(["wp_id", "bulan"]).size().rename("txn_wp_month").reset_index()
-    df = df.merge(counts, on=["wp_id", "bulan"], how="left")
+    counts = df_encoded.groupby(["wp_id", "month"]).size().rename("txn_wp_month").reset_index()
+    df_encoded = df_encoded.merge(counts, on=["wp_id", "month"], how="left")
 
     # Feature selection
-    feature_cols = [col for col in df.columns if col not in ["wp_id", "tanggal", "kode_sector", "nama_kecamatan"]]
-    X = df[feature_cols].copy()
+    feature_cols = [col for col in df_encoded.columns if col not in ["wp_id", "tanggal", "pajak_dibayar", "target_pajak", "rasio_pajakdibayar"]]
+    X = df_encoded[feature_cols].copy()
 
     # Log transform numeric features
     for col in ["pajak_dibayar", "target_pajak"]:
@@ -93,7 +96,7 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
             X[col] = np.log1p(X[col])
 
     # Standardize numeric features
-    num_features = ["pajak_dibayar", "target_pajak", "rasio_pajakdibayar", "txn_wp_month", "bulan"]
+    num_features = ["pajak_dibayar", "target_pajak", "rasio_pajakdibayar", "txn_wp_month", "month"]
     num_features = [f for f in num_features if f in X.columns]
     if num_features:
         X[num_features] = StandardScaler().fit_transform(X[num_features])
@@ -108,11 +111,12 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
     pred = model.fit_predict(X)
     score = model.decision_function(X)
     
-    df["anomaly_label"] = pred
-    df["anomaly_score"] = -score
-    df["is_anomaly"] = df["anomaly_label"] == -1
+    df_encoded["anomaly_label"] = pred
+    df_encoded["anomaly_score"] = -score
+    df_encoded["is_anomaly"] = df_encoded["anomaly_label"] == -1
 
-    return df
+    # Return the dataframe with anomalies and other info
+    return df_encoded
 
 # =========================
 # Visualization Function
