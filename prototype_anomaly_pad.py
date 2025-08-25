@@ -176,7 +176,7 @@ def main():
     with tab2:
         st.header("Run Anomaly Detection")
         uploaded_file = st.file_uploader("Choose CSV file", type="csv")
-        contamination = st.slider("Contamination parameter", 0.01, 0.5, 0.06, 0.01)
+        contamination = st.slider("Contamination parameter", 0.01, 0.5, 0.02, 0.01)
         if uploaded_file is not None and st.button("Run Detection"):
             with st.spinner("Running anomaly detection..."):
                 df = run_anomaly_detection(uploaded_file, contamination=contamination)
