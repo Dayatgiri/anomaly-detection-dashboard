@@ -95,6 +95,9 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
     df["anomaly_score"] = -score
     df["is_anomaly"] = df["anomaly_label"] == -1
 
+    # Show sector name based on wp_id
+    df['sector_name'] = df['sector_code'].apply(lambda x: x.split('_')[-1] if isinstance(x, str) else "Unknown")
+    
     return df
 
 # =========================
@@ -111,18 +114,14 @@ def create_visualizations(df):
     axes[0,0].axvline(x=df['anomaly_score'].quantile(0.95), color='red', linestyle='--', label='95th percentile')
     axes[0,0].legend()
 
-    # Anomalies by sector
-    sector_cols = [col for col in df.columns if col.startswith("sector_code_")]
-    if sector_cols:
-        df["sector"] = df[sector_cols].idxmax(axis=1)
-    else:
-        df["sector"] = "all"
-    sector_anomalies = df.groupby('sector')['is_anomaly'].mean().sort_values(ascending=False)
-    axes[0,1].barh(range(len(sector_anomalies)), sector_anomalies.values, color='salmon')
-    axes[0,1].set_yticks(range(len(sector_anomalies)))
-    axes[0,1].set_yticklabels(sector_anomalies.index)
-    axes[0,1].set_xlabel('Proportion of Anomalies')
-    axes[0,1].set_title('Anomaly Proportion by Sector')
+    # Anomalies by sector based on wp_id
+    anomalies_wp_id = df[df['is_anomaly'] == True]
+    wp_id_sectors = anomalies_wp_id[['wp_id', 'sector_name']].drop_duplicates()
+    
+    sector_anomalies = wp_id_sectors.groupby('sector_name').size().sort_values(ascending=False)
+    axes[0,1].barh(sector_anomalies.index, sector_anomalies.values, color='salmon')
+    axes[0,1].set_xlabel('Number of Anomalies')
+    axes[0,1].set_title('Anomalies by Sector')
 
     # Paid vs Expected tax
     sample_df = df.sample(min(1000, len(df)), random_state=42)
@@ -194,7 +193,7 @@ def main():
             st.subheader("Top Anomalies")
             top_anomalies = st.session_state.df[st.session_state.df["is_anomaly"]].sort_values(
                 "anomaly_score", ascending=False).head(10)
-            st.dataframe(top_anomalies[['wp_id','paid_tax','expected_tax','anomaly_score']])
+            st.dataframe(top_anomalies[['wp_id','sector_name','paid_tax','expected_tax','anomaly_score']])
         else:
             st.info("Run anomaly detection first to see visualizations")
 
