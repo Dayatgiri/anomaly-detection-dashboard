@@ -40,7 +40,8 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
     """Run Isolation Forest anomaly detection with proper scaling and categorical handling"""
     
     try:
-        df = pd.read_csv(input_csv, parse_dates=["tanggal"])
+        # Read CSV
+        df = pd.read_csv(input_csv)
     except Exception as e:
         st.error(f"Error reading CSV: {e}")
         return None
@@ -58,6 +59,22 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
         st.error(f"Missing required column(s) in CSV: {missing_cols}")
         return None
 
+    # Handle date column (convert to datetime)
+    if 'tanggal' in df.columns:
+        df['tanggal'] = pd.to_datetime(df['tanggal'], format='%d/%m/%Y', errors='coerce')
+    else:
+        st.error("'tanggal' column is missing in the CSV.")
+        return None
+
+    # Clean up the numeric columns (remove periods and convert to float)
+    numeric_columns = ['omzet_est', 'tarif', 'expected_tax', 'paid_tax', 'ratio_paid_expected']
+    for col in numeric_columns:
+        if col in df.columns:
+            df[col] = df[col].replace({',': '', '.': ''}, regex=True).astype(float)
+        else:
+            st.error(f"Column {col} is missing in the CSV.")
+            return None
+
     # Create ratio and month
     df["ratio_paid_expected"] = (df["paid_tax"] / df["expected_tax"]).replace([np.inf, -np.inf], np.nan).fillna(0.0)
     df["month"] = df["tanggal"].dt.month
@@ -66,7 +83,6 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
     counts = df.groupby(["wp_id", "month"]).size().rename("txn_wp_month").reset_index()
     df = df.merge(counts, on=["wp_id", "month"], how="left")
 
-    # Use sector_name directly (no encoding)
     # Feature selection
     feature_cols = [col for col in df.columns if col not in ["wp_id", "tanggal", "sector_name"]]
     X = df[feature_cols].copy()
