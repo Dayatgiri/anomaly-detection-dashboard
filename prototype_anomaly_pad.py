@@ -120,11 +120,13 @@ def create_visualizations(df):
 
     # Anomalies by sector based on wp_id
     anomalies_wp_id = df[df['is_anomaly'] == True]
-    wp_id_sectors = anomalies_wp_id[['wp_id', 'sector_code']].drop_duplicates()
     
-    # Check if sector_code exists before trying to group by
-    if 'sector_code' in wp_id_sectors.columns:
-        sector_anomalies = wp_id_sectors.groupby('sector_code').size().sort_values(ascending=False)
+    # After one-hot encoding, sector_code becomes multiple columns like sector_code_parkir, sector_code_reklame, etc.
+    sector_columns = [col for col in df.columns if col.startswith("sector_code_")]
+    
+    if sector_columns:
+        # Sum anomalies by sector columns
+        sector_anomalies = anomalies_wp_id[sector_columns].sum().sort_values(ascending=False)
         axes[0,1].barh(sector_anomalies.index, sector_anomalies.values, color='salmon')
         axes[0,1].set_xlabel('Number of Anomalies')
         axes[0,1].set_title('Anomalies by Sector')
