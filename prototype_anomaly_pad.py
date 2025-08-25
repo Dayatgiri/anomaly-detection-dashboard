@@ -3,6 +3,7 @@ import subprocess
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import IsolationForest
+from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 import seaborn as sns
 from datetime import datetime
@@ -13,8 +14,7 @@ import streamlit as st
 # =========================
 def check_python_installation():
     try:
-        result = subprocess.run([sys.executable, "--version"], 
-                              capture_output=True, text=True, timeout=10)
+        result = subprocess.run([sys.executable, "--version"], capture_output=True, text=True, timeout=10)
         if result.returncode == 0:
             return True, f"Python found: {result.stdout.strip()}"
         else:
@@ -34,10 +34,10 @@ def install_required_packages():
     return results
 
 # =========================
-# Anomaly Detection Function with Adjusted Parameters
+# Anomaly Detection Function
 # =========================
-def run_anomaly_detection(input_csv, contamination=0.02, random_state=42, n_estimators=200, max_samples='auto', max_features=1.0):
-    """Run Isolation Forest anomaly detection with adjusted parameters"""
+def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
+    """Run Isolation Forest anomaly detection with proper scaling and categorical handling"""
     
     try:
         df = pd.read_csv(input_csv, parse_dates=["tanggal"])
@@ -56,52 +56,38 @@ def run_anomaly_detection(input_csv, contamination=0.02, random_state=42, n_esti
         return None
 
     # Create ratio and month
-    if "ratio_paid_expected" not in df.columns:
-        df["ratio_paid_expected"] = (df["paid_tax"] / df["expected_tax"]).replace([np.inf, -np.inf], np.nan).fillna(0.0)
-    if "month" not in df.columns:
-        df["month"] = df["tanggal"].dt.month
+    df["ratio_paid_expected"] = (df["paid_tax"] / df["expected_tax"]).replace([np.inf, -np.inf], np.nan).fillna(0.0)
+    df["month"] = df["tanggal"].dt.month
 
     # txn_wp_month
-    if "txn_wp_month" not in df.columns:
-        counts = df.groupby(["wp_id","month"]).size().rename("txn_wp_month").reset_index()
-        df = df.merge(counts, on=["wp_id","month"], how="left")
+    counts = df.groupby(["wp_id","month"]).size().rename("txn_wp_month").reset_index()
+    df = df.merge(counts, on=["wp_id","month"], how="left")
 
-    # sector_code
-    if "sector_code" not in df.columns:
-        sectors = sorted(df["sektor"].unique())
-        sector_code_map = {s:i for i,s in enumerate(sectors)}
-        df["sector_code"] = df["sektor"].map(sector_code_map)
-
-    # kec_code
-    if "kec_code" not in df.columns:
-        kecamatan = sorted(df["kecamatan"].unique())
-        kec_code_map = {k:i for i,k in enumerate(kecamatan)}
-        df["kec_code"] = df["kecamatan"].map(kec_code_map)
+    # One-hot encode categorical features
+    df = pd.get_dummies(df, columns=["sektor","kecamatan"], drop_first=True)
 
     # Feature selection
-    try:
-        X = df[["paid_tax", "expected_tax", "ratio_paid_expected", "month",
-                "txn_wp_month", "sector_code", "kec_code"]].copy()
-    except KeyError as e:
-        st.error(f"Column missing for features: {e}")
-        return df
+    feature_cols = [col for col in df.columns if col not in ["wp_id","tanggal"]]
+    X = df[feature_cols].copy()
 
-    # Log transform
-    X["log_paid"] = np.log1p(X["paid_tax"])
-    X["log_expected"] = np.log1p(X["expected_tax"])
-    X = X.drop(columns=["paid_tax","expected_tax"])
+    # Log transform numeric features
+    for col in ["paid_tax", "expected_tax"]:
+        if col in X.columns:
+            X[col] = np.log1p(X[col])
 
-    # Isolation Forest with adjusted parameters
+    # Standardize numeric features
+    num_features = ["paid_tax","expected_tax","ratio_paid_expected","txn_wp_month","month"]
+    num_features = [f for f in num_features if f in X.columns]
+    if num_features:
+        X[num_features] = StandardScaler().fit_transform(X[num_features])
+
+    # Isolation Forest
     model = IsolationForest(
-        n_estimators=n_estimators,         # Adjusted number of estimators
-        contamination=contamination,       # Adjusted contamination rate
-        max_samples=max_samples,           # Max samples per tree
-        max_features=max_features,         # Max features to use for each tree
-        random_state=random_state,         # Set random state for reproducibility
-        n_jobs=-1                           # Use all CPU cores for faster processing
+        n_estimators=300, 
+        contamination=contamination, 
+        random_state=random_state, 
+        n_jobs=-1
     )
-
-    # Fit the model and get predictions
     pred = model.fit_predict(X)
     score = model.decision_function(X)
     
@@ -126,7 +112,12 @@ def create_visualizations(df):
     axes[0,0].legend()
 
     # Anomalies by sector
-    sector_anomalies = df.groupby('sektor')['is_anomaly'].mean().sort_values(ascending=False)
+    sector_cols = [col for col in df.columns if col.startswith("sektor_")]
+    if sector_cols:
+        df["sector"] = df[sector_cols].idxmax(axis=1)
+    else:
+        df["sector"] = "all"
+    sector_anomalies = df.groupby('sector')['is_anomaly'].mean().sort_values(ascending=False)
     axes[0,1].barh(range(len(sector_anomalies)), sector_anomalies.values, color='salmon')
     axes[0,1].set_yticks(range(len(sector_anomalies)))
     axes[0,1].set_yticklabels(sector_anomalies.index)
@@ -155,11 +146,11 @@ def create_visualizations(df):
     return fig
 
 # =========================
-# Main Streamlit App
+# Streamlit App
 # =========================
 def main():
     st.set_page_config(page_title="Anomaly Detection Dashboard", layout="wide")
-    st.title("Python Environment Setup & Anomaly Detection Dashboard")
+    st.title("Python Environment & Tax Anomaly Detection Dashboard")
     
     tab1, tab2, tab3 = st.tabs(["Environment Check", "Anomaly Detection", "Visualizations"])
     
@@ -184,7 +175,7 @@ def main():
     with tab2:
         st.header("Run Anomaly Detection")
         uploaded_file = st.file_uploader("Choose CSV file", type="csv")
-        contamination = st.slider("Contamination parameter", 0.01, 0.5, 0.02, 0.01)
+        contamination = st.slider("Contamination parameter", 0.01, 0.5, 0.05, 0.01)
         if uploaded_file is not None and st.button("Run Detection"):
             with st.spinner("Running anomaly detection..."):
                 df = run_anomaly_detection(uploaded_file, contamination=contamination)
@@ -203,7 +194,7 @@ def main():
             st.subheader("Top Anomalies")
             top_anomalies = st.session_state.df[st.session_state.df["is_anomaly"]].sort_values(
                 "anomaly_score", ascending=False).head(10)
-            st.dataframe(top_anomalies[['wp_id','sektor','kecamatan','paid_tax','expected_tax','anomaly_score']])
+            st.dataframe(top_anomalies[['wp_id','paid_tax','expected_tax','anomaly_score']])
         else:
             st.info("Run anomaly detection first to see visualizations")
 
