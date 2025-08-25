@@ -66,23 +66,35 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
         st.error("'tanggal' column is missing in the CSV.")
         return None
 
-    # Clean up the numeric columns (remove periods and convert to float)
+    # Clean up the numeric columns (remove commas and periods, then convert to float)
     numeric_columns = ['omset', 'target_pajak', 'pajak_dibayar', 'rasio_pajakdibayar']
     for col in numeric_columns:
         if col in df.columns:
+            # Remove commas and periods, then convert to float
             df[col] = df[col].replace({',': '', '.': ''}, regex=True).astype(float)
         else:
             st.error(f"Column {col} is missing in the CSV.")
             return None
 
     # Ensure `kode_sector` is numeric (convert if necessary)
-    df['kode_sector'] = pd.to_numeric(df['kode_sector'], errors='coerce')
+    if 'kode_sector' in df.columns:
+        df['kode_sector'] = pd.to_numeric(df['kode_sector'], errors='coerce')
+    else:
+        st.error("'kode_sector' column is missing in the CSV.")
+        return None
+
+    # Debugging: Check if 'kode_sector' is present
+    st.write(f"Unique values in 'kode_sector': {df['kode_sector'].unique()}")
 
     # Drop 'nama_sektor' column as it's categorical and not needed for training
-    df = df.drop(columns=["nama_sektor"])
+    if 'nama_sektor' in df.columns:
+        df = df.drop(columns=["nama_sektor"])
 
     # One-hot encode categorical features
     df_encoded = pd.get_dummies(df, columns=["kode_sector", "nama_kecamatan"], drop_first=True)
+
+    # Debugging: Check column names after one-hot encoding
+    st.write(f"Columns after one-hot encoding: {df_encoded.columns.tolist()}")
 
     # Create ratio and month
     df_encoded["rasio_pajakdibayar"] = (df_encoded["pajak_dibayar"] / df_encoded["target_pajak"]).replace([np.inf, -np.inf], np.nan).fillna(0.0)
@@ -141,7 +153,7 @@ def create_visualizations(df):
     # Anomalies by sector based on wp_id
     anomalies_wp_id = df[df['is_anomaly'] == True]
     
-    # Group anomalies by sector_name
+    # Group anomalies by sector_name (use 'kode_sector' instead of 'nama_sektor')
     sector_anomalies = anomalies_wp_id.groupby('kode_sector').size().sort_values(ascending=False)
     axes[0,1].barh(sector_anomalies.index, sector_anomalies.values, color='salmon')
     axes[0,1].set_xlabel('Number of Anomalies')
