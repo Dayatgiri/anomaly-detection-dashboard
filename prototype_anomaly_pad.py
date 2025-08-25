@@ -126,10 +126,12 @@ def create_visualizations(df):
     anomalies_wp_id = df[df['is_anomaly'] == True]
     wp_id_sectors = anomalies_wp_id[['wp_id', 'sector_name']].drop_duplicates()
     
-    sector_anomalies = wp_id_sectors.groupby('sector_name').size().sort_values(ascending=False)
-    axes[0,1].barh(sector_anomalies.index, sector_anomalies.values, color='salmon')
-    axes[0,1].set_xlabel('Number of Anomalies')
-    axes[0,1].set_title('Anomalies by Sector')
+    # Check if sector_name exists before trying to group by
+    if 'sector_name' in wp_id_sectors.columns:
+        sector_anomalies = wp_id_sectors.groupby('sector_name').size().sort_values(ascending=False)
+        axes[0,1].barh(sector_anomalies.index, sector_anomalies.values, color='salmon')
+        axes[0,1].set_xlabel('Number of Anomalies')
+        axes[0,1].set_title('Anomalies by Sector')
 
     # Paid vs Expected tax
     sample_df = df.sample(min(1000, len(df)), random_state=42)
