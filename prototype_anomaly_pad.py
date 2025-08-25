@@ -75,6 +75,12 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
             st.error(f"Column {col} is missing in the CSV.")
             return None
 
+    # Ensure `kode_sector` is numeric (convert if necessary)
+    df['kode_sector'] = pd.to_numeric(df['kode_sector'], errors='coerce')
+
+    # Drop 'nama_sektor' column as it's categorical and not needed for training
+    df = df.drop(columns=["nama_sektor"])
+
     # One-hot encode categorical features
     df_encoded = pd.get_dummies(df, columns=["kode_sector", "nama_kecamatan"], drop_first=True)
 
