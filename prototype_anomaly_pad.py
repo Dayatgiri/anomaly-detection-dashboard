@@ -52,7 +52,7 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
     st.write(f"Columns in dataset: {df.columns.tolist()}")  # This will print the column names to the Streamlit app
 
     # Required columns check
-    required_cols = ["wp_id", "tanggal", "sector_code", "kec_code", "paid_tax", "expected_tax"]
+    required_cols = ["wp_id", "tanggal", "sector_name", "kec_code", "paid_tax", "expected_tax"]
     missing_cols = [col for col in required_cols if col not in df.columns]
     if missing_cols:
         st.error(f"Missing required column(s) in CSV: {missing_cols}")
@@ -66,9 +66,9 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
     counts = df.groupby(["wp_id", "month"]).size().rename("txn_wp_month").reset_index()
     df = df.merge(counts, on=["wp_id", "month"], how="left")
 
-    # No one-hot encoding of sector_code, use it directly
+    # Use sector_name directly (no encoding)
     # Feature selection
-    feature_cols = [col for col in df.columns if col not in ["wp_id", "tanggal"]]
+    feature_cols = [col for col in df.columns if col not in ["wp_id", "tanggal", "sector_name"]]
     X = df[feature_cols].copy()
 
     # Log transform numeric features
@@ -115,9 +115,9 @@ def create_visualizations(df):
     # Anomalies by sector based on wp_id
     anomalies_wp_id = df[df['is_anomaly'] == True]
     
-    # Group anomalies by sector_code
-    if 'sector_code' in df.columns:
-        sector_anomalies = anomalies_wp_id.groupby('sector_code').size().sort_values(ascending=False)
+    # Group anomalies by sector_name
+    if 'sector_name' in df.columns:
+        sector_anomalies = anomalies_wp_id.groupby('sector_name').size().sort_values(ascending=False)
         axes[0,1].barh(sector_anomalies.index, sector_anomalies.values, color='salmon')
         axes[0,1].set_xlabel('Number of Anomalies')
         axes[0,1].set_title('Anomalies by Sector')
@@ -192,7 +192,7 @@ def main():
             st.subheader("Top Anomalies")
             top_anomalies = st.session_state.df[st.session_state.df["is_anomaly"]].sort_values(
                 "anomaly_score", ascending=False).head(10)
-            st.dataframe(top_anomalies[['wp_id','sector_code','paid_tax','expected_tax','anomaly_score']])
+            st.dataframe(top_anomalies[['wp_id','sector_name','paid_tax','expected_tax','anomaly_score']])
         else:
             st.info("Run anomaly detection first to see visualizations")
 
