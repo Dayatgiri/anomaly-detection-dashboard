@@ -53,7 +53,7 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
     st.write(f"Columns in dataset: {df.columns.tolist()}")  # This will print the column names to the Streamlit app
 
     # Required columns check
-    required_cols = ["wp_id", "tanggal", "kode_sector", "nama_kecamatan", "pajak_dibayar", "target_pajak"]
+    required_cols = ["wp_id", "tanggal", "kode_sector", "kode_kecamatan", "pajak_dibayar", "target_pajak"]
     missing_cols = [col for col in required_cols if col not in df.columns]
     if missing_cols:
         st.error(f"Missing required column(s) in CSV: {missing_cols}")
@@ -83,8 +83,12 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42):
         st.error("'kode_sector' column is missing in the CSV.")
         return None
 
-    # One-hot encode the `kode_sector` column only
-    df_encoded = pd.get_dummies(df, columns=["kode_sector"], drop_first=True)
+    # Drop non-numeric columns or encode them (for categorical columns like 'kode_kecamatan')
+    categorical_columns = ['nama_sektor']
+    df_encoded = df.drop(categorical_columns, axis=1)  # Drop the categorical columns
+
+    # One-hot encode the `kode_sector` and `kode_kecamatan` columns
+    df_encoded = pd.get_dummies(df_encoded, columns=["kode_sector", "kode_kecamatan"], drop_first=True)
 
     # Debugging: Check column names after one-hot encoding
     st.write(f"Columns after one-hot encoding: {df_encoded.columns.tolist()}")
