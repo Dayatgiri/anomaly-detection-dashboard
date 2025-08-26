@@ -166,7 +166,7 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42, date_f
     # Model
     model = IsolationForest(
         n_estimators=300,
-        contamination=contamination,
+        contamination=0.05,  # Lowered contamination to 5%
         random_state=random_state,
         n_jobs=-1
     )
