@@ -107,18 +107,13 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42, date_f
     counts = df.groupby(['wp_id', 'bulan']).size().rename('txn_wp_month').reset_index()
     df = df.merge(counts, on=['wp_id', 'bulan'], how='left')
 
-    # Buang kolom kategorikal "nama_*" kalau ada (opsional)
-    drop_if_exist = [c for c in ['nama_sektor', 'nama_kecamatan'] if c in df.columns]
-    if drop_if_exist:
-        df = df.drop(columns=drop_if_exist)
-
-    # One-hot langsung untuk kode
+    # One-hot langsung untuk kode, TAPI tampilkan nama_sektor dan nama_kecamatan
     df_encoded = pd.get_dummies(df, columns=['kode_sector', 'kode_kecamatan'], drop_first=True)
 
     st.write(f"Columns after one-hot: {df_encoded.columns.tolist()}")
 
     # Fitur: sertakan variabel inti pajak & derived
-    base_exclude = ['wp_id', 'tanggal']
+    base_exclude = ['wp_id', 'tanggal', 'nama_sektor', 'nama_kecamatan']  # Drop sektor dan kecamatan nama dari fitur
     feature_cols = [c for c in df_encoded.columns if c not in base_exclude]
 
     X = df_encoded[feature_cols].copy()
@@ -148,6 +143,10 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42, date_f
     out['anomaly_score'] = -score  # lebih besar = lebih aneh
     out['is_anomaly'] = out['anomaly_label'] == -1
 
+    # Kembalikan nama_sektor dan nama_kecamatan, ganti kode sektor dan kode kecamatan
+    out['nama_sektor'] = df['nama_sektor']
+    out['nama_kecamatan'] = df['nama_kecamatan']
+
     return out
 
 # =========================
@@ -166,16 +165,12 @@ def create_visualizations(df):
         axes[0,0].axvline(x=p95, linestyle='--', label='95th percentile')
         axes[0,0].legend()
 
-    # Anomali per sektor (berdasar dummy kode_sector_)
+    # Anomali per sektor (berdasar nama_sektor yang dihidupkan)
     anomalies = df[df['is_anomaly'] == True]
-    sector_cols = [c for c in df.columns if c.startswith('kode_sector_')]
-    if sector_cols:
-        sector_anomalies = anomalies[sector_cols].sum().sort_values(ascending=False)
-        axes[0,1].barh(sector_anomalies.index, sector_anomalies.values)
-        axes[0,1].set_xlabel('Number of Anomalies')
-        axes[0,1].set_title('Anomalies by Sector')
-    else:
-        axes[0,1].text(0.5, 0.5, 'No sector dummies found', ha='center')
+    sector_anomalies = anomalies['nama_sektor'].value_counts()
+    axes[0,1].barh(sector_anomalies.index, sector_anomalies.values)
+    axes[0,1].set_xlabel('Number of Anomalies')
+    axes[0,1].set_title('Anomalies by Sector')
 
     # Paid vs Target (log-safe)
     sample_df = df.sample(min(1000, len(df)), random_state=42)
@@ -194,23 +189,12 @@ def create_visualizations(df):
 
     # Anomali per waktu
     if 'tanggal' in df.columns:
-        # jika 'tanggal' bukan datetime, coba parse
-        if not np.issubdtype(df['tanggal'].dtype, np.datetime64):
-            try:
-                df['tanggal'] = pd.to_datetime(df['tanggal'], errors='coerce')
-            except:
-                pass
-        if np.issubdtype(df['tanggal'].dtype, np.datetime64):
-            time_anomalies = df.groupby(df['tanggal'].dt.to_period('M'))['is_anomaly'].mean()
-            axes[1,1].plot(time_anomalies.index.astype(str), time_anomalies.values, marker='o')
-            axes[1,1].set_xlabel('Time (Monthly)')
-            axes[1,1].set_ylabel('Proportion of Anomalies')
-            axes[1,1].set_title('Anomaly Proportion Over Time')
-            plt.setp(axes[1,1].get_xticklabels(), rotation=45)
-        else:
-            axes[1,1].text(0.5, 0.5, 'tanggal not datetime', ha='center')
-    else:
-        axes[1,1].text(0.5, 0.5, 'tanggal column missing', ha='center')
+        time_anomalies = df.groupby(df['tanggal'].dt.to_period('M'))['is_anomaly'].mean()
+        axes[1,1].plot(time_anomalies.index.astype(str), time_anomalies.values, marker='o')
+        axes[1,1].set_xlabel('Time (Monthly)')
+        axes[1,1].set_ylabel('Proportion of Anomalies')
+        axes[1,1].set_title('Anomaly Proportion Over Time')
+        plt.setp(axes[1,1].get_xticklabels(), rotation=45)
 
     plt.tight_layout()
     return fig
@@ -278,13 +262,10 @@ def main():
         if 'df' in st.session_state:
             st.pyplot(create_visualizations(st.session_state.df))
             st.subheader("Top Anomalies")
-            # tampilkan 10 teratas
-            cols_show = ['wp_id', 'pajak_dibayar', 'target_pajak', 'rasio_pajakdibayar', 'anomaly_score']
-            cols_show = [c for c in cols_show if c in st.session_state.df.columns]
-            more_cols = [c for c in st.session_state.df.columns if c.startswith('kode_sector_') or c.startswith('kode_kecamatan_')]
+            cols_show = ['wp_id', 'pajak_dibayar', 'target_pajak', 'rasio_pajakdibayar', 'anomaly_score', 'nama_sektor', 'nama_kecamatan']
             top_anomalies = st.session_state.df[st.session_state.df["is_anomaly"]].sort_values(
                 "anomaly_score", ascending=False).head(10)
-            st.dataframe(top_anomalies[cols_show + more_cols])
+            st.dataframe(top_anomalies[cols_show])
         else:
             st.info("Run anomaly detection first to see visualizations")
 
