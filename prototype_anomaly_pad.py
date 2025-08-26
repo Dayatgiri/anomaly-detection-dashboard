@@ -102,6 +102,10 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42, date_f
     if not invalid_dates.empty:
         st.warning(f"Found {len(invalid_dates)} invalid dates after parsing. They have been set as NaT.")
 
+        # Log invalid rows for further review
+        st.write("Invalid rows (with missing dates):")
+        st.write(invalid_dates)
+
     # Perbaiki kolom rasio_pajakdibayar agar tidak ada titik ribuan dan menjadi format desimal
     df['rasio_pajakdibayar'] = df['rasio_pajakdibayar'].replace({',': '', '.': ''}, regex=True).astype(float)
 
