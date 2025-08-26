@@ -189,12 +189,23 @@ def create_visualizations(df):
 
     # Anomali per waktu
     if 'tanggal' in df.columns:
-        time_anomalies = df.groupby(df['tanggal'].dt.to_period('M'))['is_anomaly'].mean()
-        axes[1,1].plot(time_anomalies.index.astype(str), time_anomalies.values, marker='o')
-        axes[1,1].set_xlabel('Time (Monthly)')
-        axes[1,1].set_ylabel('Proportion of Anomalies')
-        axes[1,1].set_title('Anomaly Proportion Over Time')
-        plt.setp(axes[1,1].get_xticklabels(), rotation=45)
+        # Cek jika 'tanggal' sudah dalam format datetime
+        if not np.issubdtype(df['tanggal'].dtype, np.datetime64):
+            df['tanggal'] = pd.to_datetime(df['tanggal'], errors='coerce')
+
+        # Pastikan ada data untuk anomali
+        if df['is_anomaly'].sum() > 0:
+            # Mengelompokkan data berdasarkan bulan
+            time_anomalies = df.groupby(df['tanggal'].dt.to_period('M'))['is_anomaly'].mean()
+            axes[1,1].plot(time_anomalies.index.astype(str), time_anomalies.values, marker='o')
+            axes[1,1].set_xlabel('Time (Monthly)')
+            axes[1,1].set_ylabel('Proportion of Anomalies')
+            axes[1,1].set_title('Anomaly Proportion Over Time')
+            plt.setp(axes[1,1].get_xticklabels(), rotation=45)
+        else:
+            axes[1,1].text(0.5, 0.5, 'No anomalies detected', ha='center')
+    else:
+        axes[1,1].text(0.5, 0.5, 'tanggal column missing', ha='center')
 
     plt.tight_layout()
     return fig
