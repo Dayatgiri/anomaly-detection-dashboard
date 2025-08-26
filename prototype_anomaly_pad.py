@@ -79,6 +79,9 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42, date_f
 
     st.write(f"Columns in dataset: {df.columns.tolist()}")
 
+    # Clean the 'tanggal' column: strip extra spaces and handle special characters
+    df['tanggal'] = df['tanggal'].str.strip()  # Strip any leading/trailing spaces
+
     # Debug: check the first few rows of 'tanggal' before parsing
     st.write("Before parsing 'tanggal' column:")
     st.write(df[['tanggal']].head(10))
@@ -99,11 +102,15 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42, date_f
         st.warning(f"Found {len(invalid_dates)} invalid dates after parsing. They have been set as NaT.")
         # Log invalid rows for further review
         st.write("Invalid rows (with missing dates):")
-        st.write(invalid_dates)
+        st.write(invalid_dates[['wp_id', 'tanggal']])
 
-    # Handle invalid dates: optionally, replace NaT with a default date or remove rows
-    # Example: Replace NaT with a default date
-    df['tanggal'] = df['tanggal'].fillna(pd.to_datetime('01/01/2000', format='%d/%m/%Y'))
+        # Option 1: Drop rows with invalid dates
+        df = df.dropna(subset=['tanggal'])
+        st.warning(f"Rows with invalid dates have been dropped. Remaining rows: {len(df)}")
+
+        # Option 2: Replace NaT with a default date
+        # df['tanggal'] = df['tanggal'].fillna(pd.to_datetime('01/01/2000', format='%d/%m/%Y'))
+        # st.warning("Invalid dates have been replaced with default date 01/01/2000")
 
     # Debug: check the 'tanggal' column after parsing
     st.write("After parsing 'tanggal' column:")
