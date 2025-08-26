@@ -79,7 +79,14 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42, date_f
 
     st.write(f"Columns in dataset: {df.columns.tolist()}")
 
-    # Simplified Date Parsing: Directly parse 'tanggal' column
+    # Clean the 'tanggal' column: strip extra spaces
+    df['tanggal'] = df['tanggal'].str.strip()  # Strip any leading/trailing spaces
+
+    # Debug: check the first few rows of 'tanggal' before parsing
+    st.write("Before parsing 'tanggal' column:")
+    st.write(df[['tanggal']].head(10))
+
+    # Try parsing dates with Indonesian format (dd/mm/yyyy)
     df['tanggal'] = pd.to_datetime(df['tanggal'], format=date_format, errors='coerce', dayfirst=True)
 
     # Check if there are invalid dates after parsing
@@ -98,6 +105,10 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42, date_f
         # Option 2: Replace NaT with a default date (uncomment to use)
         # df['tanggal'] = df['tanggal'].fillna(pd.to_datetime('01/01/2000', format='%d/%m/%Y'))
         # st.warning("Invalid dates have been replaced with default date 01/01/2000")
+
+    # Debug: check the 'tanggal' column after parsing
+    st.write("After parsing 'tanggal' column:")
+    st.write(df[['tanggal']].head(10))
 
     # Check if there's enough data before proceeding with scaling
     if df.empty:
