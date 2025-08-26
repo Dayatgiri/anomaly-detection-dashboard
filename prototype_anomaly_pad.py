@@ -90,21 +90,24 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42, date_f
         st.error(f"Missing required column(s): {missing_cols}")
         return None
 
-    # Tanggal
+    # Tanggal: Try parsing with multiple formats
     df['tanggal'] = pd.to_datetime(df['tanggal'], format=date_format, errors='coerce', dayfirst=True)
+
+    # Check if there are invalid dates after parsing
+    invalid_dates = df[df['tanggal'].isna()]
+    if not invalid_dates.empty:
+        st.warning(f"Found {len(invalid_dates)} invalid dates after parsing. They have been set as NaT.")
+        # Log invalid rows for further review
+        st.write("Invalid rows (with missing dates):")
+        st.write(invalid_dates)
+
+    # Handle invalid dates: optionally, replace NaT with a default date or remove rows
+    # Example: Replace NaT with a default date
+    df['tanggal'] = df['tanggal'].fillna(pd.to_datetime('01/01/2000', format='%d/%m/%Y'))
 
     # Debug: check the 'tanggal' column after parsing
     st.write("After parsing 'tanggal' column:")
     st.write(df[['tanggal']].head(10))
-
-    # Handle invalid dates
-    invalid_dates = df[df['tanggal'].isna()]
-    if not invalid_dates.empty:
-        st.warning(f"Found {len(invalid_dates)} invalid dates after parsing. They have been set as NaT.")
-
-        # Log invalid rows for further review
-        st.write("Invalid rows (with missing dates):")
-        st.write(invalid_dates)
 
     # Perbaiki kolom rasio_pajakdibayar agar tidak ada titik ribuan dan menjadi format desimal
     df['rasio_pajakdibayar'] = df['rasio_pajakdibayar'].replace({',': '', '.': ''}, regex=True).astype(float)
