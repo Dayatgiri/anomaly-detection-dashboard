@@ -13,7 +13,7 @@ import streamlit as st
 # =========================
 @st.cache_data(show_spinner=False)
 def read_csv_cached(file):
-    return pd.read_csv(file, delimiter=';')  # Use semicolon as delimiter
+    return pd.read_csv(file)  # Use default comma delimiter
 
 def parse_num_id(x):
     """
@@ -80,6 +80,10 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42, date_f
     st.write(f"Columns in dataset: {df.columns.tolist()}")
 
     # Clean the 'tanggal' column: strip extra spaces
+    if 'tanggal' not in df.columns:
+        st.error("The 'tanggal' column is missing in the dataset.")
+        return None
+    
     df['tanggal'] = df['tanggal'].str.strip()  # Strip any leading/trailing spaces
 
     # Debug: check the first few rows of 'tanggal' before parsing
