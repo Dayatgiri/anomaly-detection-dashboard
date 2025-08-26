@@ -5,8 +5,6 @@ import numpy as np
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
-# seaborn tidak dipakai; hapus jika ingin
-# import seaborn as sns
 from datetime import datetime
 import streamlit as st
 
@@ -89,15 +87,15 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42, date_f
         return None
 
     # Tanggal
-    df['tanggal'] = pd.to_datetime(df['tanggal'], format=date_format, errors='coerce')
-    if df['tanggal'].isna().all():
-        st.error("Kolom 'tanggal' gagal diparse. Cek format tanggal (default: dd/mm/yyyy).")
-        return None
+    df['tanggal'] = pd.to_datetime(df['tanggal'], format=date_format, errors='coerce', dayfirst=True)
 
-    # Numeric parsing (toleran format Indonesia)
+    # Perbaiki kolom rasio_pajakdibayar agar tidak ada titik ribuan dan menjadi format desimal
+    df['rasio_pajakdibayar'] = df['rasio_pajakdibayar'].replace({',': '', '.': ''}, regex=True).astype(float)
+
+    # Perbaiki kolom lainnya agar tidak ada titik ribuan
     for col in ['omset', 'target_pajak', 'pajak_dibayar']:
         if col in df.columns:
-            df[col] = df[col].apply(parse_num_id)
+            df[col] = df[col].replace({',': '', '.': ''}, regex=True).astype(float)
 
     # Rasio dihitung ulang dan aman terhadap pembagi 0
     df['rasio_pajakdibayar'] = (df['pajak_dibayar'] / df['target_pajak']).replace([np.inf, -np.inf], np.nan).fillna(0.0)
