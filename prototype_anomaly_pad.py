@@ -254,7 +254,12 @@ def main():
                 if df_out is not None:
                     anomalies = df_out[df_out["is_anomaly"]]
                     st.success(f"Detection complete! Found {len(anomalies)} anomalies.")
-                    st.download_button("Download Anomalies CSV", anomalies.to_csv(index=False), file_name="anomalies.csv", mime="text/csv")
+                    st.download_button(
+                        "Download Full Results CSV",  # Allow download of both true and false anomalies
+                        df_out.to_csv(index=False),  # Download the entire df_out
+                        file_name="full_anomalies_results.csv",  # New file name for full results
+                        mime="text/csv"
+                    )
                     st.session_state.df = df_out
 
     # Tab 3: Visualizations
