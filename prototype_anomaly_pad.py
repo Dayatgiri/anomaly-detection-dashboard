@@ -79,6 +79,10 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42, date_f
 
     st.write(f"Columns in dataset: {df.columns.tolist()}")
 
+    # Debug: check the first few rows of 'tanggal' before parsing
+    st.write("Before parsing 'tanggal' column:")
+    st.write(df[['tanggal']].head(10))
+
     # Cek kolom wajib minimum
     required_cols_min = ["wp_id", "tanggal", "kode_sector", "kode_kecamatan", "pajak_dibayar", "target_pajak"]
     missing_cols = [c for c in required_cols_min if c not in df.columns]
@@ -88,6 +92,15 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42, date_f
 
     # Tanggal
     df['tanggal'] = pd.to_datetime(df['tanggal'], format=date_format, errors='coerce', dayfirst=True)
+
+    # Debug: check the 'tanggal' column after parsing
+    st.write("After parsing 'tanggal' column:")
+    st.write(df[['tanggal']].head(10))
+
+    # Handle invalid dates
+    invalid_dates = df[df['tanggal'].isna()]
+    if not invalid_dates.empty:
+        st.warning(f"Found {len(invalid_dates)} invalid dates after parsing. They have been set as NaT.")
 
     # Perbaiki kolom rasio_pajakdibayar agar tidak ada titik ribuan dan menjadi format desimal
     df['rasio_pajakdibayar'] = df['rasio_pajakdibayar'].replace({',': '', '.': ''}, regex=True).astype(float)
