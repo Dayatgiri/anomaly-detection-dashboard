@@ -265,6 +265,9 @@ def main():
             st.subheader("Top Anomalies")
             top_anomalies = st.session_state.df[st.session_state.df["is_anomaly"]].sort_values("anomaly_score", ascending=False).head(10)
             st.dataframe(top_anomalies)
+            st.subheader("False Anomalies")
+            false_anomalies = st.session_state.df[st.session_state.df["is_anomaly"] == False].sort_values("anomaly_score", ascending=False).head(10)
+            st.dataframe(false_anomalies)
         else:
             st.info("Run anomaly detection first to see visualizations")
 
