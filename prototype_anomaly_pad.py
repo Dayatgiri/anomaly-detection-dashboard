@@ -13,7 +13,7 @@ import streamlit as st
 # =========================
 @st.cache_data(show_spinner=False)
 def read_csv_cached(file):
-    return pd.read_csv(file)
+    return pd.read_csv(file, delimiter=';')  # Use semicolon as delimiter
 
 def parse_num_id(x):
     """
