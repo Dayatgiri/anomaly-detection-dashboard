@@ -67,7 +67,7 @@ def install_required_packages():
 # Anomaly Detection Function
 # =========================
 def run_anomaly_detection(input_csv, contamination=0.05, random_state=42, date_format='%d/%m/%Y'):
-    """Run Isolation Forest anomaly detection with robust parsing & feature handling"""
+    """Run Isolation Forest anomaly detection with minimal date parsing."""
     try:
         df = read_csv_cached(input_csv)
     except Exception as e:
@@ -79,27 +79,14 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42, date_f
 
     st.write(f"Columns in dataset: {df.columns.tolist()}")
 
-    # Clean the 'tanggal' column: strip extra spaces and handle special characters
-    df['tanggal'] = df['tanggal'].str.strip()  # Strip any leading/trailing spaces
-
-    # Debug: check the first few rows of 'tanggal' before parsing
-    st.write("Before parsing 'tanggal' column:")
-    st.write(df[['tanggal']].head(10))
-
-    # Cek kolom wajib minimum
-    required_cols_min = ["wp_id", "tanggal", "kode_sector", "kode_kecamatan", "pajak_dibayar", "target_pajak"]
-    missing_cols = [c for c in required_cols_min if c not in df.columns]
-    if missing_cols:
-        st.error(f"Missing required column(s): {missing_cols}")
-        return None
-
-    # Tanggal: Try parsing with multiple formats
+    # Simplified Date Parsing: Directly parse 'tanggal' column
     df['tanggal'] = pd.to_datetime(df['tanggal'], format=date_format, errors='coerce', dayfirst=True)
 
     # Check if there are invalid dates after parsing
     invalid_dates = df[df['tanggal'].isna()]
     if not invalid_dates.empty:
         st.warning(f"Found {len(invalid_dates)} invalid dates after parsing. They have been set as NaT.")
+        
         # Log invalid rows for further review
         st.write("Invalid rows (with missing dates):")
         st.write(invalid_dates[['wp_id', 'tanggal']])
@@ -108,7 +95,7 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42, date_f
         df = df.dropna(subset=['tanggal'])
         st.warning(f"Rows with invalid dates have been dropped. Remaining rows: {len(df)}")
 
-        # Option 2: Replace NaT with a default date
+        # Option 2: Replace NaT with a default date (uncomment to use)
         # df['tanggal'] = df['tanggal'].fillna(pd.to_datetime('01/01/2000', format='%d/%m/%Y'))
         # st.warning("Invalid dates have been replaced with default date 01/01/2000")
 
