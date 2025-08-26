@@ -99,11 +99,12 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42, date_f
         # df['tanggal'] = df['tanggal'].fillna(pd.to_datetime('01/01/2000', format='%d/%m/%Y'))
         # st.warning("Invalid dates have been replaced with default date 01/01/2000")
 
-    # Debug: check the 'tanggal' column after parsing
-    st.write("After parsing 'tanggal' column:")
-    st.write(df[['tanggal']].head(10))
+    # Check if there's enough data before proceeding with scaling
+    if df.empty:
+        st.error("The dataset is empty after filtering invalid dates. No data to process.")
+        return None
 
-    # Perbaiki kolom rasio_pajakdibayar agar tidak ada titik ribuan dan menjadi format desimal
+    # Continue with the rest of the processing (omset, target_pajak, etc.)
     df['rasio_pajakdibayar'] = df['rasio_pajakdibayar'].replace({',': '', '.': ''}, regex=True).astype(float)
 
     # Perbaiki kolom lainnya agar tidak ada titik ribuan
@@ -131,6 +132,11 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42, date_f
     feature_cols = [c for c in df_encoded.columns if c not in base_exclude]
 
     X = df_encoded[feature_cols].copy()
+
+    # Check if there are any rows to process
+    if X.empty:
+        st.error("There are no valid rows to scale. Please check your dataset.")
+        return None
 
     # Log transform variabel besaran uang (stabilkan skala)
     for col in ['pajak_dibayar', 'target_pajak', 'omset']:
