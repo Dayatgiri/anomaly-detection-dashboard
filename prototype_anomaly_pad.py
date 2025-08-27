@@ -132,9 +132,6 @@ def run_anomaly_detection(input_csv, date_format='%d/%m/%Y'):
 # =========================
 # Visualization Function
 # =========================
-# =========================
-# Update to Visualization Function (Fixing Anomaly Proportion Over Time Text Position with Adjustments)
-# =========================
 def create_visualizations(df):
     fig, axes = plt.subplots(2, 2, figsize=(15, 12))
 
@@ -180,26 +177,27 @@ def create_visualizations(df):
         # Add legend with color description
         axes[1, 0].legend(['Normal (Blue)', 'Anomaly (Red)'], loc='upper right')
 
-    # Anomalies over time
+    # Anomalies over time (displaying count of anomalies)
     if 'tanggal' in df.columns:
         if not np.issubdtype(df['tanggal'].dtype, np.datetime64):
             df['tanggal'] = pd.to_datetime(df['tanggal'], errors='coerce')
 
         if df['is_anomaly'].sum() > 0:
-            time_anomalies = df.groupby(df['tanggal'].dt.to_period('M'))['is_anomaly'].mean()
+            # Count anomalies per month
+            time_anomalies = df.groupby(df['tanggal'].dt.to_period('M'))['is_anomaly'].sum()
             axes[1, 1].plot(time_anomalies.index.astype(str), time_anomalies.values, marker='o')
             axes[1, 1].set_xlabel('Time (Monthly)')
-            axes[1, 1].set_ylabel('Proportion of Anomalies')
-            axes[1, 1].set_title(f'Anomaly Proportion Over Time\n(Number of anomalies: {df["is_anomaly"].sum()})')
+            axes[1, 1].set_ylabel('Number of Anomalies')
+            axes[1, 1].set_title(f'Anomalies Count Over Time\n(Number of anomalies: {df["is_anomaly"].sum()})')
             plt.setp(axes[1, 1].get_xticklabels(), rotation=45)
 
-            # Annotate the proportion of anomalies over time (using more control over the placement)
-            for i, val in enumerate(time_anomalies.values):
+            # Annotate the number of anomalies over time (showing the count)
+            for i, count in enumerate(time_anomalies.values):
                 x_pos = time_anomalies.index[i].strftime('%b-%Y')
-
-                # Use xytext for better placement control (small offset)
-                axes[1, 1].annotate(f'{val:.2f}', 
-                                    xy=(x_pos, val),  # Position at the exact point
+                
+                # Using annotate to show the count of anomalies
+                axes[1, 1].annotate(f'{count}', 
+                                    xy=(x_pos, count),  # Position the annotation at the point
                                     xytext=(0, 5),  # Small offset for text positioning
                                     textcoords='offset points',  # Text offset points to avoid overlap
                                     ha='center', va='bottom', fontsize=10, color='black', 
@@ -214,7 +212,6 @@ def create_visualizations(df):
 
     plt.tight_layout()
     return fig
-
 
 # =========================
 # Streamlit App
