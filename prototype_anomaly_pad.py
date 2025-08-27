@@ -192,7 +192,7 @@ def create_visualizations(df):
             # Add bin range label below the bar (only for bins with data)
             bin_range_label = f'{bins[i]:.2f} - {bins[i+1]:.2f}'
             axes[0,0].text(patches[i].get_x() + patches[i].get_width() / 2, -0.05 * max(n), bin_range_label,
-                           ha='center', va='top', fontsize=9, color='black')
+                           ha='center', va='top', fontsize=9, color='black', rotation=90)  # Rotation to vertical
 
     # Remove x-tick labels for bin ranges to avoid duplication
     axes[0,0].set_xticks([])  # Clear x-ticks to avoid redundant range labels
