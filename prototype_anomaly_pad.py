@@ -133,7 +133,7 @@ def run_anomaly_detection(input_csv, date_format='%d/%m/%Y'):
 # Visualization Function
 # =========================
 # =========================
-# Update to Visualization Function (Using annotate to fix text position)
+# Update to Visualization Function (Fixing Anomaly Proportion Over Time Text Position)
 # =========================
 def create_visualizations(df):
     fig, axes = plt.subplots(2, 2, figsize=(15, 12))
@@ -193,12 +193,14 @@ def create_visualizations(df):
             axes[1, 1].set_title(f'Anomaly Proportion Over Time\n(Number of anomalies: {df["is_anomaly"].sum()})')
             plt.setp(axes[1, 1].get_xticklabels(), rotation=45)
 
-            # Annotate the proportion of anomalies over time (using annotate for better positioning)
+            # Annotate the proportion of anomalies over time (adjusting the position to fit within the plot)
             for i, val in enumerate(time_anomalies.values):
-                # Offset slightly to the left to ensure text does not overlap with point
+                x_pos = time_anomalies.index[i].strftime('%b-%Y')
+                
+                # Using annotate to fix the position more precisely
                 axes[1, 1].annotate(f'{val:.2f}', 
-                                    xy=(time_anomalies.index[i].strftime('%b-%Y'), val), 
-                                    xytext=(-5, 5),  # Small offset for text placement
+                                    xy=(x_pos, val),  # Position the annotation at the point
+                                    xytext=(0, 5),  # Small offset to avoid overlap with the point
                                     textcoords='offset points',  # Use offset points for proper alignment
                                     ha='center', va='bottom', fontsize=10, color='black', 
                                     bbox=dict(facecolor='white', edgecolor='none', alpha=0.6))
