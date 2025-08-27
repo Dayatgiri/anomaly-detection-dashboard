@@ -196,10 +196,9 @@ def create_visualizations(df):
             axes[0,0].text(patches[i].get_x() + patches[i].get_width() / 2, -0.05 * max(n), bin_range_label,
                            ha='center', va='top', fontsize=9, color='black')
 
-    # Add more space for x-tick labels and rotate them
-    axes[0,0].set_xticks(bins[:-1] + np.diff(bins) / 2)  # Place tick marks at the center of each bin
-    axes[0,0].set_xticklabels([f'{bins[i]:.2f} - {bins[i+1]:.2f}' for i in range(len(bins)-1)], rotation=45, ha='right', fontsize=10)
-    axes[0,0].tick_params(axis='x', pad=10)  # Add more padding for readability
+    # Remove x-tick labels for bin ranges to avoid duplication
+    axes[0,0].set_xticks([])  # Clear x-ticks to avoid redundant range labels
+    axes[0,0].tick_params(axis='x', pad=10)  # Adjust padding
 
     # Anomalies by sector
     anomalies = df[df['is_anomaly'] == True]
