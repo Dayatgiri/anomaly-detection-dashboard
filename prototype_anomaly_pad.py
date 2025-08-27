@@ -133,7 +133,7 @@ def run_anomaly_detection(input_csv, date_format='%d/%m/%Y'):
 # Visualization Function
 # =========================
 # =========================
-# Update to Visualization Function
+# Update to Visualization Function with Legends
 # =========================
 def create_visualizations(df):
     fig, axes = plt.subplots(2, 2, figsize=(15, 12))
@@ -154,9 +154,15 @@ def create_visualizations(df):
     # Anomalies by sector
     anomalies = df[df['is_anomaly'] == True]
     sector_anomalies = anomalies['nama_sektor'].value_counts()
-    axes[0, 1].barh(sector_anomalies.index, sector_anomalies.values)
+    bars = axes[0, 1].barh(sector_anomalies.index, sector_anomalies.values)
     axes[0, 1].set_xlabel('Number of Anomalies')
     axes[0, 1].set_title(f'Anomalies by Sector\n(Number of anomalies: {len(anomalies)})')
+
+    # Annotate the anomalies by sector
+    for bar in bars:
+        width = bar.get_width()
+        axes[0, 1].text(width, bar.get_y() + bar.get_height() / 2, str(int(width)), 
+                        ha='left', va='center', fontsize=10, color='black')
 
     # Paid vs Expected Pajak (scatter plot) for all data, not just anomalies
     if {'target_pajak', 'pajak_dibayar'}.issubset(df.columns):
@@ -192,8 +198,17 @@ def create_visualizations(df):
             axes[1, 1].set_ylabel('Proportion of Anomalies')
             axes[1, 1].set_title(f'Anomaly Proportion Over Time\n(Number of anomalies: {df["is_anomaly"].sum()})')
             plt.setp(axes[1, 1].get_xticklabels(), rotation=45)
+
+            # Annotate the proportion of anomalies over time
+            for i, val in enumerate(time_anomalies.values):
+                axes[1, 1].text(time_anomalies.index[i].strftime('%b-%Y'), val, f'{val:.2f}', 
+                                ha='center', va='bottom', fontsize=10, color='black')
         else:
             axes[1, 1].text(0.5, 0.5, 'No anomalies detected', ha='center')
+
+    # Add legends for scatter plot and other relevant parts
+    axes[0, 1].legend(['Anomalies per Sector'], loc='upper right')
+    axes[1, 0].legend(['Anomalies (Red) vs Normal (Blue)', 'Anomaly Threshold'], loc='upper left')
 
     plt.tight_layout()
     return fig
