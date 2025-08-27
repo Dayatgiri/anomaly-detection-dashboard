@@ -136,7 +136,8 @@ def create_visualizations(df):
     fig, axes = plt.subplots(2, 2, figsize=(15, 12))
 
     # Histogram of anomalies (based on 'is_anomaly')
-    n, bins, patches = axes[0, 0].hist(df['is_anomaly'].dropna(), bins=2, alpha=0.7, edgecolor='black')
+    # Convert boolean to numeric (True=1, False=0) for the histogram
+    n, bins, patches = axes[0, 0].hist(df['is_anomaly'].astype(int).dropna(), bins=2, alpha=0.7, edgecolor='black')
     axes[0, 0].set_xlabel('Anomaly Status (0=Normal, 1=Anomaly)')
     axes[0, 0].set_ylabel('Frequency')
     axes[0, 0].set_title(f'Distribution of Anomalies\n(Number of anomalies: {df["is_anomaly"].sum()})')
