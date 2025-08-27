@@ -193,14 +193,13 @@ def create_visualizations(df):
             # Annotate the proportion of anomalies over time (adjusting the position to fit within the plot)
             for i, val in enumerate(time_anomalies.values):
                 x_pos = time_anomalies.index[i].strftime('%b-%Y')
+                
+                # Ensure that the values appear correctly positioned at each point
+                axes[1, 1].text(x_pos, val, f'{val:.2f}', 
+                                ha='center', va='bottom', fontsize=10, color='black',  
+                                verticalalignment='bottom' if val < 0.05 else 'top', 
+                                bbox=dict(facecolor='white', edgecolor='none', alpha=0.6))
 
-                # Using annotate to fix the position more precisely
-                axes[1, 1].annotate(f'{val:.2f}', 
-                                    xy=(x_pos, val),  # Position the annotation at the point
-                                    xytext=(0, 5),  # Small offset to avoid overlap with the point
-                                    textcoords='offset points',  # Use offset points for proper alignment
-                                    ha='center', va='bottom', fontsize=10, color='black', 
-                                    bbox=dict(facecolor='white', edgecolor='none', alpha=0.6))
         else:
             axes[1, 1].text(0.5, 0.5, 'No anomalies detected', ha='center')
 
