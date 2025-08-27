@@ -132,11 +132,13 @@ def run_anomaly_detection(input_csv, date_format='%d/%m/%Y'):
 # =========================
 # Visualization Function
 # =========================
+# =========================
+# Update to Visualization Function
+# =========================
 def create_visualizations(df):
     fig, axes = plt.subplots(2, 2, figsize=(15, 12))
 
     # Histogram of anomalies (based on 'is_anomaly')
-    # Convert boolean to numeric (True=1, False=0) for the histogram
     n, bins, patches = axes[0, 0].hist(df['is_anomaly'].astype(int).dropna(), bins=2, alpha=0.7, edgecolor='black')
     axes[0, 0].set_xlabel('Anomaly Status (0=Normal, 1=Anomaly)')
     axes[0, 0].set_ylabel('Frequency')
@@ -156,17 +158,16 @@ def create_visualizations(df):
     axes[0, 1].set_xlabel('Number of Anomalies')
     axes[0, 1].set_title(f'Anomalies by Sector\n(Number of anomalies: {len(anomalies)})')
 
-    # Paid vs Expected Pajak (scatter plot)
-    sample_df = df.sample(min(1000, len(df)), random_state=42)
-    if {'target_pajak', 'pajak_dibayar'}.issubset(sample_df.columns):
-        x = (sample_df['target_pajak'].clip(lower=0) + 1)
-        y = (sample_df['pajak_dibayar'].clip(lower=0) + 1)
+    # Paid vs Expected Pajak (scatter plot) for all data, not just anomalies
+    if {'target_pajak', 'pajak_dibayar'}.issubset(df.columns):
+        x = (df['target_pajak'].clip(lower=0) + 1)  # Avoid division by zero or negative values
+        y = (df['pajak_dibayar'].clip(lower=0) + 1)
         # Color code based on anomaly status
-        colors = ['red' if anom else 'blue' for anom in sample_df['is_anomaly']]
+        colors = ['red' if anom else 'blue' for anom in df['is_anomaly']]
         scatter = axes[1, 0].scatter(x, y, c=colors, alpha=0.6)
         axes[1, 0].set_xlabel('Target Pajak (+1)')
         axes[1, 0].set_ylabel('Pajak Dibayar (+1)')
-        axes[1, 0].set_title(f'Paid vs Expected Pajak (Red = Anomaly)\n(Number of anomalies: {sample_df["is_anomaly"].sum()})')
+        axes[1, 0].set_title(f'Paid vs Expected Pajak (Red = Anomaly)\n(Number of anomalies: {df["is_anomaly"].sum()})')
         axes[1, 0].set_xscale('log')
         axes[1, 0].set_yscale('log')
 
@@ -174,6 +175,10 @@ def create_visualizations(df):
         anomaly_threshold = 0.1  # You can adjust this threshold based on your rule
         axes[1, 0].axvline(x=anomaly_threshold, color='black', linestyle='--', label="Anomaly Threshold")
         axes[1, 0].legend()
+
+        # Annotate scatter points for both anomaly and non-anomaly
+        for i, txt in enumerate(df['pajak_dibayar']):
+            axes[1, 0].annotate(f'{txt:.0f}', (x.iloc[i], y.iloc[i]), fontsize=8, color='black', alpha=0.7)
 
     # Anomalies over time
     if 'tanggal' in df.columns:
@@ -192,6 +197,7 @@ def create_visualizations(df):
 
     plt.tight_layout()
     return fig
+
 
 # =========================
 # Streamlit App
