@@ -152,7 +152,7 @@ def create_visualizations(df):
     # Annotate only non-zero bins with the count values and bin ranges
     for i in range(len(patches)):
         height = patches[i].get_height()
-        if height > 0:  # Only annotate bins with data
+        if height > 0:
             axes[0, 0].text(patches[i].get_x() + patches[i].get_width() / 2, height, str(int(height)),
                             ha='center', va='bottom', fontsize=10, color='black')
 
@@ -160,7 +160,7 @@ def create_visualizations(df):
             axes[0, 0].text(patches[i].get_x() + patches[i].get_width() / 2, -0.05 * max(n), bin_range_label,
                             ha='center', va='top', fontsize=9, color='black', rotation=90)
 
-    axes[0, 0].set_xticks([])  # Clear x-ticks to avoid redundant range labels
+    axes[0, 0].set_xticks([])
     axes[0, 0].tick_params(axis='x', pad=10)
 
     # Anomalies by sector
