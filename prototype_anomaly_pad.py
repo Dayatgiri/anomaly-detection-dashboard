@@ -67,7 +67,7 @@ def install_required_packages():
 # Anomaly Detection Function
 # =========================
 def run_anomaly_detection(input_csv, contamination=0.05, random_state=42, date_format='%d/%m/%Y'):
-    """Run Isolation Forest anomaly detection with minimal date parsing."""
+    """Run Anomaly detection based on target tax and paid tax."""
     try:
         df = read_csv_cached(input_csv)
     except Exception as e:
@@ -107,67 +107,28 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42, date_f
         st.error("The dataset is empty after filtering invalid dates. No data to process.")
         return None
 
-    # Clean and transform columns
-    df['rasio_pajakdibayar'] = df['rasio_pajakdibayar'].replace({',': '', '.': ''}, regex=True).astype(float)
-    for col in ['omset', 'target_pajak', 'pajak_dibayar']:
-        if col in df.columns:
-            df[col] = df[col].replace({',': '', '.': ''}, regex=True).astype(float)
-
-    # Calculate 'rasio_pajakdibayar'
+    # Calculate rasio_pajakdibayar
     df['rasio_pajakdibayar'] = (df['pajak_dibayar'] / df['target_pajak']).replace([np.inf, -np.inf], np.nan).fillna(0.0)
 
-    # Extract month from 'tanggal'
-    df['bulan'] = df['tanggal'].dt.month
+    # Logic for detecting anomalies based on pajak
+    def deteksi_anomali(row):
+        # If pajak dibayar > target pajak, it's an anomaly
+        if row['pajak_dibayar'] > row['target_pajak']:
+            return True
+        # If pajak dibayar is less than target pajak by more than 10%
+        elif row['pajak_dibayar'] < row['target_pajak'] and (row['target_pajak'] - row['pajak_dibayar']) / row['target_pajak'] > 0.1:
+            return True
+        else:
+            return False
 
-    # Count transactions per wp_id and month
-    counts = df.groupby(['wp_id', 'bulan']).size().rename('txn_wp_month').reset_index()
-    df = df.merge(counts, on=['wp_id', 'bulan'], how='left')
-
-    # One-hot encoding for 'kode_sector' and 'kode_kecamatan'
-    df_encoded = pd.get_dummies(df, columns=['kode_sector', 'kode_kecamatan'], drop_first=True)
-
-    # Define feature columns
-    base_exclude = ['wp_id', 'tanggal', 'nama_sektor', 'nama_kecamatan']  # Drop these columns
-    feature_cols = [c for c in df_encoded.columns if c not in base_exclude]
-
-    X = df_encoded[feature_cols].copy()
-
-    # Check if there are any valid rows to process
-    if X.empty:
-        st.error("There are no valid rows to scale. Please check your dataset.")
-        return None
-
-    # Log transform large numerical columns
-    for col in ['pajak_dibayar', 'target_pajak', 'omset']:
-        if col in X.columns:
-            X[col] = np.log1p(X[col].clip(lower=0))
-
-    # Standardize numerical features
-    num_features = [c for c in ['pajak_dibayar', 'target_pajak', 'rasio_pajakdibayar', 'txn_wp_month', 'bulan', 'omset'] if c in X.columns]
-    if num_features:
-        X[num_features] = StandardScaler().fit_transform(X[num_features])
-
-    # Train Isolation Forest model
-    model = IsolationForest(
-        n_estimators=300,
-        contamination=contamination,  # Contamination defines the expected outliers proportion
-        random_state=random_state,
-        n_jobs=-1
-    )
-    pred = model.fit_predict(X)
-    score = model.decision_function(X)
-
-    # Prepare the final output dataframe
-    out = df_encoded.copy()
-    out['anomaly_label'] = pred
-    out['anomaly_score'] = -score  # Larger score = more anomalous
-    out['is_anomaly'] = out['anomaly_label'] == -1
+    # Apply the anomaly detection function to each row
+    df['is_anomaly'] = df.apply(deteksi_anomali, axis=1)
 
     # Add sector and district names back
-    out['nama_sektor'] = df['nama_sektor']
-    out['nama_kecamatan'] = df['nama_kecamatan']
+    df['nama_sektor'] = df['nama_sektor']
+    df['nama_kecamatan'] = df['nama_kecamatan']
 
-    return out
+    return df
 
 # =========================
 # Visualization Function
