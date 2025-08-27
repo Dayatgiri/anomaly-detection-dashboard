@@ -176,10 +176,17 @@ def create_visualizations(df):
     fig, axes = plt.subplots(2, 2, figsize=(15, 12))
 
     # Histogram of anomaly scores
-    axes[0,0].hist(df['anomaly_score'].dropna(), bins=50, alpha=0.7, edgecolor='black')
+    n, bins, patches = axes[0,0].hist(df['anomaly_score'].dropna(), bins=50, alpha=0.7, edgecolor='black')
     axes[0,0].set_xlabel('Anomaly Score')
     axes[0,0].set_ylabel('Frequency')
     axes[0,0].set_title(f'Distribution of Anomaly Scores\n(Number of anomalies: {df["is_anomaly"].sum()})')
+
+    # Annotate the bars with the count values
+    for i in range(len(patches)):
+        height = patches[i].get_height()
+        if height > 0:
+            axes[0,0].text(patches[i].get_x() + patches[i].get_width() / 2, height, str(int(height)),
+                           ha='center', va='bottom', fontsize=10, color='black')
 
     # Anomalies by sector
     anomalies = df[df['is_anomaly'] == True]
