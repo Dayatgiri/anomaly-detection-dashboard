@@ -62,7 +62,7 @@ def install_required_packages():
     return results
 
 # =========================
-# Anomaly Detection Function
+# Anomaly Detection Function (Without Contamination and Isolation Forest)
 # =========================
 def run_anomaly_detection(input_csv, date_format='%d/%m/%Y'):
     """Run Anomaly detection based on target tax and paid tax using custom logic."""
@@ -135,25 +135,18 @@ def run_anomaly_detection(input_csv, date_format='%d/%m/%Y'):
 def create_visualizations(df):
     fig, axes = plt.subplots(2, 2, figsize=(15, 12))
 
-    # Histogram of anomaly scores
-    n, bins, patches = axes[0, 0].hist(df['anomaly_score'].dropna(), bins=50, alpha=0.7, edgecolor='black')
-    axes[0, 0].set_xlabel('Anomaly Score')
+    # Histogram of anomalies (based on 'is_anomaly')
+    n, bins, patches = axes[0, 0].hist(df['is_anomaly'].dropna(), bins=2, alpha=0.7, edgecolor='black')
+    axes[0, 0].set_xlabel('Anomaly Status (0=Normal, 1=Anomaly)')
     axes[0, 0].set_ylabel('Frequency')
-    axes[0, 0].set_title(f'Distribution of Anomaly Scores\n(Number of anomalies: {df["is_anomaly"].sum()})')
+    axes[0, 0].set_title(f'Distribution of Anomalies\n(Number of anomalies: {df["is_anomaly"].sum()})')
 
-    # Annotate only non-zero bins with the count values and bin ranges
+    # Annotate the histogram for better readability
     for i in range(len(patches)):
         height = patches[i].get_height()
-        if height > 0:
+        if height > 0:  # Only annotate bins with data
             axes[0, 0].text(patches[i].get_x() + patches[i].get_width() / 2, height, str(int(height)),
                             ha='center', va='bottom', fontsize=10, color='black')
-
-            bin_range_label = f'{bins[i]:.2f} - {bins[i + 1]:.2f}'
-            axes[0, 0].text(patches[i].get_x() + patches[i].get_width() / 2, -0.05 * max(n), bin_range_label,
-                            ha='center', va='top', fontsize=9, color='black', rotation=90)
-
-    axes[0, 0].set_xticks([])
-    axes[0, 0].tick_params(axis='x', pad=10)
 
     # Anomalies by sector
     anomalies = df[df['is_anomaly'] == True]
@@ -176,8 +169,8 @@ def create_visualizations(df):
         axes[1, 0].set_xscale('log')
         axes[1, 0].set_yscale('log')
 
-        # Add line to separate normal and anomalous data
-        anomaly_threshold = sample_df['anomaly_score'].median()  # This is an example; you can adjust it
+        # Add line to separate normal and anomalous data based on some condition
+        anomaly_threshold = 0.1  # You can adjust this threshold based on your rule
         axes[1, 0].axvline(x=anomaly_threshold, color='black', linestyle='--', label="Anomaly Threshold")
         axes[1, 0].legend()
 
@@ -247,10 +240,10 @@ def main():
         if 'df' in st.session_state:
             st.pyplot(create_visualizations(st.session_state.df))
             st.subheader("Top Anomalies")
-            top_anomalies = st.session_state.df[st.session_state.df["is_anomaly"]].sort_values("anomaly_score", ascending=False).head(10)
+            top_anomalies = st.session_state.df[st.session_state.df["is_anomaly"]].sort_values("is_anomaly", ascending=False).head(10)
             st.dataframe(top_anomalies)
             st.subheader("False Anomalies")
-            false_anomalies = st.session_state.df[st.session_state.df["is_anomaly"] == False].sort_values("anomaly_score", ascending=False).head(10)
+            false_anomalies = st.session_state.df[st.session_state.df["is_anomaly"] == False].sort_values("is_anomaly", ascending=False).head(10)
             st.dataframe(false_anomalies)
         else:
             st.info("Run anomaly detection first to see visualizations")
