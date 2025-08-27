@@ -132,6 +132,9 @@ def run_anomaly_detection(input_csv, date_format='%d/%m/%Y'):
 # =========================
 # Visualization Function
 # =========================
+# =========================
+# Update to Visualization Function (Fixing Anomaly Proportion Over Time Text Position)
+# =========================
 def create_visualizations(df):
     fig, axes = plt.subplots(2, 2, figsize=(15, 12))
 
@@ -194,11 +197,12 @@ def create_visualizations(df):
             for i, val in enumerate(time_anomalies.values):
                 # Offset sedikit ke kiri dengan mengurangi posisi X agar teks tidak keluar dari batas
                 x_pos = time_anomalies.index[i].strftime('%b-%Y')
-                
+
+                # Update text position and box properties to ensure it stays within bounds
                 axes[1, 1].text(x_pos, val, f'{val:.2f}', 
                                 ha='left', va='center', fontsize=10, color='black',  
                                 verticalalignment='bottom' if val < 0.05 else 'top', 
-                                bbox=dict(facecolor='white', edgecolor='none', alpha=0.6, pad=2))  # 'pad' to add space around text
+                                bbox=dict(facecolor='white', edgecolor='none', alpha=0.6, pad=2))
         else:
             axes[1, 1].text(0.5, 0.5, 'No anomalies detected', ha='center')
 
@@ -208,6 +212,7 @@ def create_visualizations(df):
 
     plt.tight_layout()
     return fig
+
 
 # =========================
 # Streamlit App
