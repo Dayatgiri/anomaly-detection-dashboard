@@ -179,14 +179,14 @@ def create_visualizations(df):
     axes[0,0].hist(df['anomaly_score'].dropna(), bins=50, alpha=0.7, edgecolor='black')
     axes[0,0].set_xlabel('Anomaly Score')
     axes[0,0].set_ylabel('Frequency')
-    axes[0,0].set_title('Distribution of Anomaly Scores')
+    axes[0,0].set_title(f'Distribution of Anomaly Scores\n(Number of anomalies: {df["is_anomaly"].sum()})')
 
     # Anomalies by sector
     anomalies = df[df['is_anomaly'] == True]
     sector_anomalies = anomalies['nama_sektor'].value_counts()
     axes[0,1].barh(sector_anomalies.index, sector_anomalies.values)
     axes[0,1].set_xlabel('Number of Anomalies')
-    axes[0,1].set_title('Anomalies by Sector')
+    axes[0,1].set_title(f'Anomalies by Sector\n(Number of anomalies: {len(anomalies)})')
 
     # Paid vs Expected Pajak (scatter plot)
     sample_df = df.sample(min(1000, len(df)), random_state=42)
@@ -197,7 +197,7 @@ def create_visualizations(df):
         axes[1,0].scatter(x, y, c=colors, alpha=0.6)
         axes[1,0].set_xlabel('Target Pajak (+1)')
         axes[1,0].set_ylabel('Pajak Dibayar (+1)')
-        axes[1,0].set_title('Paid vs Expected Pajak (Red = Anomaly)')
+        axes[1,0].set_title(f'Paid vs Expected Pajak (Red = Anomaly)\n(Number of anomalies: {sample_df["is_anomaly"].sum()})')
         axes[1,0].set_xscale('log')
         axes[1,0].set_yscale('log')
 
@@ -211,7 +211,7 @@ def create_visualizations(df):
             axes[1,1].plot(time_anomalies.index.astype(str), time_anomalies.values, marker='o')
             axes[1,1].set_xlabel('Time (Monthly)')
             axes[1,1].set_ylabel('Proportion of Anomalies')
-            axes[1,1].set_title('Anomaly Proportion Over Time')
+            axes[1,1].set_title(f'Anomaly Proportion Over Time\n(Number of anomalies: {df["is_anomaly"].sum()})')
             plt.setp(axes[1,1].get_xticklabels(), rotation=45)
         else:
             axes[1,1].text(0.5, 0.5, 'No anomalies detected', ha='center')
