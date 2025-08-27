@@ -177,13 +177,13 @@ def create_visualizations(df):
         # Add legend with color description
         axes[1, 0].legend(['Normal (Blue)', 'Anomaly (Red)'], loc='upper right')
 
-    # Anomalies over time (displaying count of anomalies)
+    # Anomalies over time (displaying count of anomalies per month)
     if 'tanggal' in df.columns:
         if not np.issubdtype(df['tanggal'].dtype, np.datetime64):
             df['tanggal'] = pd.to_datetime(df['tanggal'], errors='coerce')
 
         if df['is_anomaly'].sum() > 0:
-            # Count anomalies per month
+            # Count anomalies per month (sum of is_anomaly for each month)
             time_anomalies = df.groupby(df['tanggal'].dt.to_period('M'))['is_anomaly'].sum()
             axes[1, 1].plot(time_anomalies.index.astype(str), time_anomalies.values, marker='o')
             axes[1, 1].set_xlabel('Time (Monthly)')
