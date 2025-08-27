@@ -172,9 +172,6 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42, date_f
 # =========================
 # Visualization Function
 # =========================
-# =========================
-# Visualization Function
-# =========================
 def create_visualizations(df):
     fig, axes = plt.subplots(2, 2, figsize=(15, 12))
 
@@ -184,13 +181,14 @@ def create_visualizations(df):
     axes[0,0].set_ylabel('Frequency')
     axes[0,0].set_title(f'Distribution of Anomaly Scores\n(Number of anomalies: {df["is_anomaly"].sum()})')
 
-    # Annotate the bars with the count values and bin ranges
+    # Annotate only non-zero bins with the count values and bin ranges
     for i in range(len(patches)):
         height = patches[i].get_height()
-        if height > 0:
-            # Place text label at the top of the bar
+        if height > 0:  # Only annotate bins with data
+            # Place text label at the top of the bar (count)
             axes[0,0].text(patches[i].get_x() + patches[i].get_width() / 2, height, str(int(height)),
                            ha='center', va='bottom', fontsize=10, color='black')
+            
             # Add bin range label below the bar (only for bins with data)
             bin_range_label = f'{bins[i]:.2f} - {bins[i+1]:.2f}'
             axes[0,0].text(patches[i].get_x() + patches[i].get_width() / 2, -0.05 * max(n), bin_range_label,
@@ -198,7 +196,7 @@ def create_visualizations(df):
 
     # Remove x-tick labels for bin ranges to avoid duplication
     axes[0,0].set_xticks([])  # Clear x-ticks to avoid redundant range labels
-    axes[0,0].tick_params(axis='x', pad=10)  # Adjust padding
+    axes[0,0].tick_params(axis='x', pad=10)  # Adjust padding for better readability
 
     # Anomalies by sector
     anomalies = df[df['is_anomaly'] == True]
@@ -237,6 +235,7 @@ def create_visualizations(df):
 
     plt.tight_layout()
     return fig
+
 
 # =========================
 # Streamlit App
