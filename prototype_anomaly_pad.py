@@ -192,10 +192,13 @@ def create_visualizations(df):
 
             # Annotate the proportion of anomalies over time (adjusting the position to fit within the plot)
             for i, val in enumerate(time_anomalies.values):
-                axes[1, 1].text(time_anomalies.index[i].strftime('%b-%Y'), val, f'{val:.2f}', 
-                                ha='left', va='center', fontsize=10, color='black', 
+                # Offset sedikit ke kiri dengan mengurangi posisi X agar teks tidak keluar dari batas
+                x_pos = time_anomalies.index[i].strftime('%b-%Y')
+                
+                axes[1, 1].text(x_pos, val, f'{val:.2f}', 
+                                ha='left', va='center', fontsize=10, color='black',  
                                 verticalalignment='bottom' if val < 0.05 else 'top', 
-                                bbox=dict(facecolor='white', edgecolor='none', alpha=0.6))
+                                bbox=dict(facecolor='white', edgecolor='none', alpha=0.6, pad=2))  # 'pad' to add space around text
         else:
             axes[1, 1].text(0.5, 0.5, 'No anomalies detected', ha='center')
 
@@ -205,7 +208,6 @@ def create_visualizations(df):
 
     plt.tight_layout()
     return fig
-
 
 # =========================
 # Streamlit App
