@@ -133,7 +133,7 @@ def run_anomaly_detection(input_csv, date_format='%d/%m/%Y'):
 # Visualization Function
 # =========================
 # =========================
-# Update to Visualization Function (Fixing Legend and Anomaly Proportion Over Time)
+# Update to Visualization Function (Fixing Anomaly Proportion Over Time)
 # =========================
 def create_visualizations(df):
     fig, axes = plt.subplots(2, 2, figsize=(15, 12))
@@ -193,10 +193,11 @@ def create_visualizations(df):
             axes[1, 1].set_title(f'Anomaly Proportion Over Time\n(Number of anomalies: {df["is_anomaly"].sum()})')
             plt.setp(axes[1, 1].get_xticklabels(), rotation=45)
 
-            # Annotate the proportion of anomalies over time
+            # Annotate the proportion of anomalies over time (adjusting the position to fit within the plot)
             for i, val in enumerate(time_anomalies.values):
                 axes[1, 1].text(time_anomalies.index[i].strftime('%b-%Y'), val, f'{val:.2f}', 
-                                ha='center', va='bottom', fontsize=10, color='black', verticalalignment='top')
+                                ha='center', va='bottom', fontsize=10, color='black', 
+                                verticalalignment='bottom' if val < 0.05 else 'top')
         else:
             axes[1, 1].text(0.5, 0.5, 'No anomalies detected', ha='center')
 
