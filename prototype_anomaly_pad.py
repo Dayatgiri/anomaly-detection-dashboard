@@ -66,8 +66,8 @@ def install_required_packages():
 # =========================
 # Anomaly Detection Function
 # =========================
-def run_anomaly_detection(input_csv, contamination=0.05, random_state=42, date_format='%d/%m/%Y'):
-    """Run Anomaly detection based on target tax and paid tax."""
+def run_anomaly_detection(input_csv, date_format='%d/%m/%Y'):
+    """Run Anomaly detection based on target tax and paid tax using custom logic."""
     try:
         df = read_csv_cached(input_csv)
     except Exception as e:
@@ -118,23 +118,19 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42, date_f
         # If pajak dibayar is less than target pajak by more than 10%
         elif row['pajak_dibayar'] < row['target_pajak'] and (row['target_pajak'] - row['pajak_dibayar']) / row['target_pajak'] > 0.1:
             return True
+        # Otherwise, it's not an anomaly (within 10% tolerance)
         else:
             return False
 
     # Apply the anomaly detection function to each row
     df['is_anomaly'] = df.apply(deteksi_anomali, axis=1)
 
-    # Calculate anomaly score using Isolation Forest's decision function
-    X = df[['pajak_dibayar', 'target_pajak', 'rasio_pajakdibayar']].copy()
-    model = IsolationForest(n_estimators=100, contamination=contamination, random_state=random_state)
-    model.fit(X)
-    df['anomaly_score'] = -model.decision_function(X)
-
     # Add sector and district names back
     df['nama_sektor'] = df['nama_sektor']
     df['nama_kecamatan'] = df['nama_kecamatan']
 
     return df
+
 
 # =========================
 # Visualization Function
