@@ -133,7 +133,7 @@ def run_anomaly_detection(input_csv, date_format='%d/%m/%Y'):
 # Visualization Function
 # =========================
 # =========================
-# Update to Visualization Function with Legends
+# Update to Visualization Function (Fixing Legend and Anomaly Proportion Over Time)
 # =========================
 def create_visualizations(df):
     fig, axes = plt.subplots(2, 2, figsize=(15, 12))
@@ -177,14 +177,8 @@ def create_visualizations(df):
         axes[1, 0].set_xscale('log')
         axes[1, 0].set_yscale('log')
 
-        # Add line to separate normal and anomalous data based on some condition
-        anomaly_threshold = 0.1  # You can adjust this threshold based on your rule
-        axes[1, 0].axvline(x=anomaly_threshold, color='black', linestyle='--', label="Anomaly Threshold")
-        axes[1, 0].legend()
-
-        # Annotate scatter points for both anomaly and non-anomaly
-        for i, txt in enumerate(df['pajak_dibayar']):
-            axes[1, 0].annotate(f'{txt:.0f}', (x.iloc[i], y.iloc[i]), fontsize=8, color='black', alpha=0.7)
+        # Add legend with color description
+        axes[1, 0].legend(['Normal (Blue)', 'Anomaly (Red)'], loc='upper right')
 
     # Anomalies over time
     if 'tanggal' in df.columns:
@@ -202,7 +196,7 @@ def create_visualizations(df):
             # Annotate the proportion of anomalies over time
             for i, val in enumerate(time_anomalies.values):
                 axes[1, 1].text(time_anomalies.index[i].strftime('%b-%Y'), val, f'{val:.2f}', 
-                                ha='center', va='bottom', fontsize=10, color='black')
+                                ha='center', va='bottom', fontsize=10, color='black', verticalalignment='top')
         else:
             axes[1, 1].text(0.5, 0.5, 'No anomalies detected', ha='center')
 
