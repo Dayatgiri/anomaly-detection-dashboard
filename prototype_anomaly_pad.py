@@ -132,9 +132,6 @@ def run_anomaly_detection(input_csv, date_format='%d/%m/%Y'):
 # =========================
 # Visualization Function
 # =========================
-# =========================
-# Update to Visualization Function (Fixing Anomaly Proportion Over Time Text Position)
-# =========================
 def create_visualizations(df):
     fig, axes = plt.subplots(2, 2, figsize=(15, 12))
 
@@ -196,7 +193,7 @@ def create_visualizations(df):
             # Annotate the proportion of anomalies over time (adjusting the position to fit within the plot)
             for i, val in enumerate(time_anomalies.values):
                 x_pos = time_anomalies.index[i].strftime('%b-%Y')
-                
+
                 # Using annotate to fix the position more precisely
                 axes[1, 1].annotate(f'{val:.2f}', 
                                     xy=(x_pos, val),  # Position the annotation at the point
@@ -213,7 +210,6 @@ def create_visualizations(df):
 
     plt.tight_layout()
     return fig
-
 
 # =========================
 # Streamlit App
