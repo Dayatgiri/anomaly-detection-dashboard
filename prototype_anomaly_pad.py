@@ -2,8 +2,6 @@ import sys
 import subprocess
 import pandas as pd
 import numpy as np
-from sklearn.ensemble import IsolationForest
-from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 from datetime import datetime
 import streamlit as st
@@ -131,11 +129,9 @@ def run_anomaly_detection(input_csv, date_format='%d/%m/%Y'):
 
     return df
 
-
 # =========================
 # Visualization Function
 # =========================
-# Modify the scatter plot in the visualization function
 def create_visualizations(df):
     fig, axes = plt.subplots(2, 2, figsize=(15, 12))
 
@@ -230,11 +226,10 @@ def main():
     with tab2:
         st.header("Run Anomaly Detection")
         uploaded_file = st.file_uploader("Choose CSV file", type="csv")
-        contamination = st.slider("Contamination parameter", 0.01, 0.5, 0.05, 0.01)
         date_fmt = st.text_input("Date format (Python strftime)", value="%d/%m/%Y")
         if uploaded_file is not None and st.button("Run Detection"):
             with st.spinner("Running anomaly detection..."):
-                df_out = run_anomaly_detection(uploaded_file, contamination=contamination, date_format=date_fmt)
+                df_out = run_anomaly_detection(uploaded_file, date_format=date_fmt)
                 if df_out is not None:
                     anomalies = df_out[df_out["is_anomaly"]]
                     st.success(f"Detection complete! Found {len(anomalies)} anomalies.")
