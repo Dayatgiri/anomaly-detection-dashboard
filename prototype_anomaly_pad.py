@@ -172,6 +172,9 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42, date_f
 # =========================
 # Visualization Function
 # =========================
+# =========================
+# Visualization Function
+# =========================
 def create_visualizations(df):
     fig, axes = plt.subplots(2, 2, figsize=(15, 12))
 
@@ -181,17 +184,22 @@ def create_visualizations(df):
     axes[0,0].set_ylabel('Frequency')
     axes[0,0].set_title(f'Distribution of Anomaly Scores\n(Number of anomalies: {df["is_anomaly"].sum()})')
 
-    # Annotate the bars with the count values
+    # Annotate the bars with the count values and bin ranges
     for i in range(len(patches)):
         height = patches[i].get_height()
         if height > 0:
+            # Place text label at the top of the bar
             axes[0,0].text(patches[i].get_x() + patches[i].get_width() / 2, height, str(int(height)),
                            ha='center', va='bottom', fontsize=10, color='black')
+            # Add bin range label below the bar (only for bins with data)
+            bin_range_label = f'{bins[i]:.2f} - {bins[i+1]:.2f}'
+            axes[0,0].text(patches[i].get_x() + patches[i].get_width() / 2, -0.05 * max(n), bin_range_label,
+                           ha='center', va='top', fontsize=9, color='black')
 
-    # Add bin range labels below the histogram
-    bin_labels = [f'{bins[i]:.2f} - {bins[i+1]:.2f}' for i in range(len(bins)-1)]
+    # Add more space for x-tick labels and rotate them
     axes[0,0].set_xticks(bins[:-1] + np.diff(bins) / 2)  # Place tick marks at the center of each bin
-    axes[0,0].set_xticklabels(bin_labels, rotation=45, ha='right', fontsize=10)  # Label bins with the range
+    axes[0,0].set_xticklabels([f'{bins[i]:.2f} - {bins[i+1]:.2f}' for i in range(len(bins)-1)], rotation=45, ha='right', fontsize=10)
+    axes[0,0].tick_params(axis='x', pad=10)  # Add more padding for readability
 
     # Anomalies by sector
     anomalies = df[df['is_anomaly'] == True]
