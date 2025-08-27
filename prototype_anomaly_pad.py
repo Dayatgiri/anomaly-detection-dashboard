@@ -188,6 +188,11 @@ def create_visualizations(df):
             axes[0,0].text(patches[i].get_x() + patches[i].get_width() / 2, height, str(int(height)),
                            ha='center', va='bottom', fontsize=10, color='black')
 
+    # Add bin range labels below the histogram
+    bin_labels = [f'{bins[i]:.2f} - {bins[i+1]:.2f}' for i in range(len(bins)-1)]
+    axes[0,0].set_xticks(bins[:-1] + np.diff(bins) / 2)  # Place tick marks at the center of each bin
+    axes[0,0].set_xticklabels(bin_labels, rotation=45, ha='right', fontsize=10)  # Label bins with the range
+
     # Anomalies by sector
     anomalies = df[df['is_anomaly'] == True]
     sector_anomalies = anomalies['nama_sektor'].value_counts()
