@@ -132,6 +132,9 @@ def run_anomaly_detection(input_csv, date_format='%d/%m/%Y'):
 # =========================
 # Visualization Function
 # =========================
+# =========================
+# Update to Visualization Function (Fixing Anomaly Proportion Over Time Text Position with Adjustments)
+# =========================
 def create_visualizations(df):
     fig, axes = plt.subplots(2, 2, figsize=(15, 12))
 
@@ -190,15 +193,17 @@ def create_visualizations(df):
             axes[1, 1].set_title(f'Anomaly Proportion Over Time\n(Number of anomalies: {df["is_anomaly"].sum()})')
             plt.setp(axes[1, 1].get_xticklabels(), rotation=45)
 
-            # Annotate the proportion of anomalies over time (adjusting the position to fit within the plot)
+            # Annotate the proportion of anomalies over time (using more control over the placement)
             for i, val in enumerate(time_anomalies.values):
                 x_pos = time_anomalies.index[i].strftime('%b-%Y')
-                
-                # Ensure that the values appear correctly positioned at each point
-                axes[1, 1].text(x_pos, val, f'{val:.2f}', 
-                                ha='center', va='bottom', fontsize=10, color='black',  
-                                verticalalignment='bottom' if val < 0.05 else 'top', 
-                                bbox=dict(facecolor='white', edgecolor='none', alpha=0.6))
+
+                # Use xytext for better placement control (small offset)
+                axes[1, 1].annotate(f'{val:.2f}', 
+                                    xy=(x_pos, val),  # Position at the exact point
+                                    xytext=(0, 5),  # Small offset for text positioning
+                                    textcoords='offset points',  # Text offset points to avoid overlap
+                                    ha='center', va='bottom', fontsize=10, color='black', 
+                                    bbox=dict(facecolor='white', edgecolor='none', alpha=0.6))
 
         else:
             axes[1, 1].text(0.5, 0.5, 'No anomalies detected', ha='center')
@@ -209,6 +214,7 @@ def create_visualizations(df):
 
     plt.tight_layout()
     return fig
+
 
 # =========================
 # Streamlit App
