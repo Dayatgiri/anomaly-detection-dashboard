@@ -124,11 +124,18 @@ def run_anomaly_detection(input_csv, contamination=0.05, random_state=42, date_f
     # Apply the anomaly detection function to each row
     df['is_anomaly'] = df.apply(deteksi_anomali, axis=1)
 
+    # Calculate anomaly score using Isolation Forest's decision function
+    X = df[['pajak_dibayar', 'target_pajak', 'rasio_pajakdibayar']].copy()
+    model = IsolationForest(n_estimators=100, contamination=contamination, random_state=random_state)
+    model.fit(X)
+    df['anomaly_score'] = -model.decision_function(X)
+
     # Add sector and district names back
     df['nama_sektor'] = df['nama_sektor']
     df['nama_kecamatan'] = df['nama_kecamatan']
 
     return df
+
 
 # =========================
 # Visualization Function
