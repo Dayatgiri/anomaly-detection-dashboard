@@ -211,7 +211,6 @@ def create_visualizations(df):
     plt.tight_layout()
     return fig
 
-
 # =========================
 # Streamlit App
 # =========================
